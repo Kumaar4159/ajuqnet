@@ -1,0 +1,55 @@
+<%- include('../partials/layout_start') %>
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 fw-semibold">Table <%= table.tableNumber %></div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tr><th class="text-muted fw-normal">Section</th><td><%= table.section %></td></tr>
+          <tr><th class="text-muted fw-normal">Capacity</th><td><%= table.capacity %> seats</td></tr>
+          <tr><th class="text-muted fw-normal">Floor</th><td><%= table.floor %></td></tr>
+          <tr><th class="text-muted fw-normal">Status</th><td>
+            <% if (table.isUnderMaintenance) { %><span class="badge bg-warning text-dark">Maintenance</span><% } else if (!table.isActive) { %><span class="badge bg-secondary">Inactive</span><% } else { %><span class="badge bg-success">Available</span><% } %>
+          </td></tr>
+          <% if (table.description) { %><tr><th class="text-muted fw-normal">Description</th><td><%= table.description %></td></tr><% } %>
+        </table>
+        <% if (table.amenities?.length) { %>
+        <div class="mt-2 d-flex flex-wrap gap-1">
+          <% table.amenities.forEach(a => { %><span class="badge bg-light text-dark border"><%= a.replace(/_/g,' ') %></span><% }) %>
+        </div>
+        <% } %>
+        <a href="/bookings/new?tableId=<%= table._id %>" class="btn btn-primary w-100 mt-3 <%= !table.isActive||table.isUnderMaintenance?'disabled':'' %>">
+          <i class="bi bi-calendar-plus me-1"></i>Book this Table
+        </a>
+        <a href="/tables" class="btn btn-outline-secondary w-100 mt-2 btn-sm">← Back</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold">Upcoming Bookings</div>
+      <% if (!bookings.length) { %>
+      <div class="card-body text-center text-muted py-4"><i class="bi bi-calendar fs-3"></i><br>No upcoming bookings</div>
+      <% } else { %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 small">
+          <thead class="table-light"><tr><th>Ref</th><th>Start</th><th>End</th><th>Guests</th><th>By</th><th>Status</th></tr></thead>
+          <tbody>
+            <% bookings.forEach(b => { %>
+            <tr>
+              <td class="fw-semibold"><%= b.bookingReference %></td>
+              <td><%= new Date(b.startTime).toLocaleString([], {dateStyle:'short',timeStyle:'short'}) %></td>
+              <td><%= new Date(b.endTime).toLocaleString([], {dateStyle:'short',timeStyle:'short'}) %></td>
+              <td><%= b.guestCount %></td>
+              <td><%= b.bookedBy?.name||b.bookedByName %></td>
+              <td><%- include('../partials/status_badge', { status: b.status }) %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+<%- include('../partials/layout_end') %>

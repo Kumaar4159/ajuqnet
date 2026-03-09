@@ -1,0 +1,536 @@
+<%- include('../partials/layout_start') %>
+
+<style>
+/* ── Payment layout ─────────────────────────────────────────────────────── */
+.pay-wrap    { max-width: 860px; margin: 0 auto; }
+.pay-header  {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+  border-radius: var(--card-radius) var(--card-radius) 0 0;
+  padding: 1.5rem;
+}
+.pay-lock-badge {
+  display: inline-flex; align-items: center; gap: .35rem;
+  background: rgba(255,255,255,.1); border-radius: 999px;
+  padding: .2rem .7rem; font-size: .7rem; color: #a5f3fc; margin-bottom: .9rem;
+}
+.pay-merchant  { font-size: 1.05rem; font-weight: 700; color: #fff; }
+.pay-amount-big { font-size: 2.1rem; font-weight: 800; color: #fff; line-height: 1.1; }
+.pay-sub       { font-size: .75rem; color: rgba(255,255,255,.55); }
+
+/* ── Method tabs ─────────────────────────────────────────────────────────── */
+.pay-tabs { border-bottom: 1px solid var(--border-color); }
+.pay-tab  {
+  display: flex; flex-direction: column; align-items: center; gap: .15rem;
+  padding: .6rem 1rem; border: none; background: transparent;
+  color: var(--muted-color); cursor: pointer; font-size: .78rem; font-weight: 500;
+  border-bottom: 2px solid transparent; transition: all .15s; white-space: nowrap;
+}
+.pay-tab .ti { font-size: 1.1rem; }
+.pay-tab:hover { color: var(--brand-color); }
+.pay-tab.active { color: var(--brand-color); border-bottom-color: var(--brand-color); }
+
+/* ── QR ──────────────────────────────────────────────────────────────────── */
+.qr-shell {
+  width: 176px; height: 176px; border-radius: .75rem;
+  background: var(--body-bg); border: 2px dashed var(--border-color);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto; position: relative; overflow: hidden;
+}
+.qr-shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.45) 50%, transparent 100%);
+  animation: shimmer 1.3s infinite;
+}
+body.dark-mode .qr-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.07) 50%, transparent 100%);
+}
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+#qrReady { display: none; }
+
+/* ── UPI ID pill ─────────────────────────────────────────────────────────── */
+.upi-pill {
+  display: inline-flex; align-items: center; gap: .45rem;
+  background: var(--body-bg); border: 1px solid var(--border-color);
+  border-radius: 999px; padding: .35rem 1rem; font-size: .84rem;
+  font-weight: 600; color: var(--body-color);
+}
+
+/* ── Countdown ───────────────────────────────────────────────────────────── */
+.pay-timer { font-size: .78rem; color: var(--muted-color); display: flex; align-items: center; gap: .3rem; }
+.pay-timer.urgent { color: #ef4444; animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.45} }
+#timerNum { font-variant-numeric: tabular-nums; font-weight: 700; font-size: .9rem; }
+
+/* ── Card preview ────────────────────────────────────────────────────────── */
+.card-preview {
+  background: linear-gradient(135deg,#1e293b 0%,#334155 100%);
+  border-radius: 1rem; padding: 1.2rem 1.4rem; color: #fff;
+  font-family: 'Courier New', monospace; margin-bottom: 1.1rem;
+  box-shadow: 0 8px 28px rgba(0,0,0,.22); position: relative; overflow: hidden;
+}
+.card-preview::before {
+  content:''; position:absolute; top:-28px; right:-28px;
+  width:130px; height:130px; border-radius:50%; background:rgba(255,255,255,.06);
+}
+.card-chip  { width:34px;height:26px;background:linear-gradient(135deg,#f0c040,#c8960a);border-radius:4px;margin-bottom:.7rem; }
+.card-num   { font-size:1rem; letter-spacing:.17em; margin-bottom:.45rem; opacity:.9; }
+.card-meta  { display:flex; justify-content:space-between; font-size:.7rem; opacity:.55; }
+
+/* ── Bank buttons ────────────────────────────────────────────────────────── */
+.bank-btn {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .55rem .8rem; border: 1px solid var(--border-color);
+  border-radius: .5rem; background: var(--card-bg); color: var(--body-color);
+  cursor: pointer; font-size: .84rem; font-weight: 500; transition: all .15s; width: 100%;
+}
+.bank-btn:hover  { border-color: var(--brand-color); background: rgba(59,130,246,.06); }
+.bank-btn.chosen { border-color: var(--brand-color); background: rgba(59,130,246,.1); color: var(--brand-color); }
+.bank-ico { width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#fff;flex-shrink:0; }
+
+/* ── Pay button ──────────────────────────────────────────────────────────── */
+.btn-pay {
+  background: linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+  color: #fff; border: none; border-radius: .65rem;
+  padding: .9rem; font-size: .97rem; font-weight: 700;
+  width: 100%; cursor: pointer; transition: all .2s;
+  box-shadow: 0 4px 14px rgba(37,99,235,.38); position: relative;
+}
+.btn-pay:hover  { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,.5); }
+.btn-pay:active { transform: translateY(0); }
+.btn-pay.loading { pointer-events: none; opacity: .74; }
+.btn-pay .sp { display:none; width:17px;height:17px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.45rem; vertical-align:middle; }
+.btn-pay.loading .sp { display:inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Security footer ─────────────────────────────────────────────────────── */
+.secure-row { display:flex;align-items:center;justify-content:center;gap:.35rem;font-size:.7rem;color:var(--muted-color); flex-wrap: wrap; }
+.secure-row i { color: #22c55e; }
+
+/* ── Brand pills ─────────────────────────────────────────────────────────── */
+.brand-pill { display:inline-flex;align-items:center;gap:.2rem;background:var(--body-bg);border:1px solid var(--border-color);border-radius:.3rem;padding:.12rem .45rem;font-size:.68rem;font-weight:700;color:var(--muted-color); }
+
+/* ── Success modal ───────────────────────────────────────────────────────── */
+.success-circle {
+  width:78px;height:78px;border-radius:50%;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 1rem;font-size:2rem;color:#fff;
+  animation:popIn .4s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes popIn { 0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1} }
+.success-ring {
+  position:absolute;inset:-6px;border-radius:50%;
+  border:3px solid rgba(34,197,94,.3);
+  animation:ringOut 1.2s ease-out infinite;
+}
+@keyframes ringOut { 0%{transform:scale(.9);opacity:.8}100%{transform:scale(1.3);opacity:0} }
+</style>
+
+<div class="pay-wrap pb-5">
+
+  <!-- ── Blue gradient header ───────────────────────────────────────────── -->
+  <div class="pay-header">
+    <div class="pay-lock-badge">
+      <i class="bi bi-shield-lock-fill"></i> 256-bit Secured Payment
+    </div>
+    <div class="d-flex align-items-end justify-content-between flex-wrap gap-3">
+      <div>
+        <div class="pay-sub mb-1">Paying to</div>
+        <div class="pay-merchant">🏫 Campus Canteen</div>
+        <div class="pay-sub mt-1 fw-semibold" style="color:rgba(255,255,255,.7)"><%= order.orderNumber %></div>
+      </div>
+      <div class="text-end">
+        <div class="pay-sub">Total Amount</div>
+        <div class="pay-amount-big">₹<%= order.total.toFixed(2) %></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── White body ─────────────────────────────────────────────────────── -->
+  <div class="card border-0 shadow" style="border-radius:0 0 var(--card-radius) var(--card-radius)">
+
+    <!-- Order summary strip -->
+    <div class="px-4 pt-3 pb-2 border-bottom">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-semibold small">Order Summary</span>
+        <span class="badge rounded-pill" style="background:rgba(234,179,8,.15);color:#a16207;font-size:.7rem;border:1px solid rgba(234,179,8,.3)">
+          <i class="bi bi-clock me-1"></i>Awaiting Payment
+        </span>
+      </div>
+      <% order.items.forEach(function(item){ %>
+      <div class="d-flex justify-content-between small py-1 border-bottom">
+        <span><%= item.name %> <span class="text-muted">× <%= item.quantity %></span></span>
+        <span class="text-muted">₹<%= item.subtotal.toFixed(2) %></span>
+      </div>
+      <% }); %>
+      <div class="d-flex justify-content-between small py-1 text-muted"><span>Subtotal</span><span>₹<%= order.subtotal.toFixed(2) %></span></div>
+      <div class="d-flex justify-content-between small py-1 text-muted"><span>Tax (5%)</span><span>₹<%= order.tax.toFixed(2) %></span></div>
+      <div class="d-flex justify-content-between fw-bold py-1 mt-1"><span>Total</span><span class="text-primary fs-6">₹<%= order.total.toFixed(2) %></span></div>
+    </div>
+
+    <!-- Method tabs -->
+    <div class="px-4 pt-3">
+      <div class="pay-tabs d-flex gap-1 mb-3 overflow-auto pb-1">
+        <button class="pay-tab active" data-m="upi"><span class="ti">📱</span>UPI</button>
+        <button class="pay-tab" data-m="card"><span class="ti">💳</span>Card</button>
+        <button class="pay-tab" data-m="netbanking"><span class="ti">🏦</span>Net Banking</button>
+        <button class="pay-tab" data-m="cash"><span class="ti">💵</span>Cash</button>
+      </div>
+
+      <!-- ══ UPI ══════════════════════════════════════════════════════════ -->
+      <div id="panel-upi" class="pay-panel">
+        <div class="text-center py-2">
+          <div class="qr-shell mb-3">
+            <div class="qr-shimmer" id="qrShimmer"></div>
+            <div id="qrReady">
+              <svg width="148" height="148" viewBox="0 0 37 37" fill="none" xmlns="http://www.w3.org/2000/svg" style="color:var(--body-color)">
+                <rect x="1"  y="1"  width="10" height="10" rx="1.5" fill="currentColor"/>
+                <rect x="3"  y="3"  width="6"  height="6"  rx=".5"  fill="var(--card-bg)"/>
+                <rect x="4"  y="4"  width="4"  height="4"  rx=".25" fill="currentColor"/>
+                <rect x="26" y="1"  width="10" height="10" rx="1.5" fill="currentColor"/>
+                <rect x="28" y="3"  width="6"  height="6"  rx=".5"  fill="var(--card-bg)"/>
+                <rect x="29" y="4"  width="4"  height="4"  rx=".25" fill="currentColor"/>
+                <rect x="1"  y="26" width="10" height="10" rx="1.5" fill="currentColor"/>
+                <rect x="3"  y="28" width="6"  height="6"  rx=".5"  fill="var(--card-bg)"/>
+                <rect x="4"  y="29" width="4"  height="4"  rx=".25" fill="currentColor"/>
+                <rect x="13" y="1"  width="2" height="2" fill="currentColor"/>
+                <rect x="16" y="1"  width="3" height="2" fill="currentColor"/>
+                <rect x="21" y="1"  width="2" height="2" fill="currentColor"/>
+                <rect x="13" y="4"  width="3" height="2" fill="currentColor"/>
+                <rect x="18" y="4"  width="4" height="2" fill="currentColor"/>
+                <rect x="13" y="7"  width="2" height="3" fill="currentColor"/>
+                <rect x="17" y="7"  width="3" height="2" fill="currentColor"/>
+                <rect x="22" y="6"  width="3" height="3" fill="currentColor"/>
+                <rect x="1"  y="13" width="3" height="2" fill="currentColor"/>
+                <rect x="6"  y="13" width="4" height="3" fill="currentColor"/>
+                <rect x="1"  y="17" width="2" height="4" fill="currentColor"/>
+                <rect x="4"  y="16" width="3" height="2" fill="currentColor"/>
+                <rect x="1"  y="22" width="4" height="3" fill="currentColor"/>
+                <rect x="7"  y="21" width="3" height="4" fill="currentColor"/>
+                <rect x="13" y="13" width="3" height="3" fill="currentColor"/>
+                <rect x="17" y="13" width="3" height="2" fill="currentColor"/>
+                <rect x="22" y="12" width="3" height="3" fill="currentColor"/>
+                <rect x="27" y="13" width="3" height="2" fill="currentColor"/>
+                <rect x="32" y="13" width="4" height="3" fill="currentColor"/>
+                <rect x="13" y="17" width="2" height="3" fill="currentColor"/>
+                <rect x="17" y="16" width="4" height="4" fill="currentColor"/>
+                <rect x="22" y="17" width="5" height="2" fill="currentColor"/>
+                <rect x="29" y="17" width="3" height="3" fill="currentColor"/>
+                <rect x="13" y="22" width="4" height="3" fill="currentColor"/>
+                <rect x="19" y="22" width="3" height="4" fill="currentColor"/>
+                <rect x="24" y="22" width="2" height="3" fill="currentColor"/>
+                <rect x="28" y="22" width="4" height="2" fill="currentColor"/>
+                <rect x="27" y="26" width="3" height="4" fill="currentColor"/>
+                <rect x="32" y="27" width="4" height="3" fill="currentColor"/>
+              </svg>
+            </div>
+          </div>
+          <div class="upi-pill mb-2">
+            <i class="bi bi-upc-scan text-primary"></i>
+            campuscanteen@upi
+            <button class="btn-xs ms-1" id="copyUpi" title="Copy UPI ID"><i class="bi bi-copy"></i></button>
+          </div>
+          <div class="pay-timer justify-content-center mb-3" id="timerWrap">
+            <i class="bi bi-hourglass-split"></i>
+            <span>Expires in</span>
+            <span id="timerNum">02:00</span>
+          </div>
+          <p class="small text-muted mb-2">Scan with any UPI app</p>
+          <div class="d-flex justify-content-center gap-2 flex-wrap">
+            <span class="brand-pill"><i class="bi bi-google me-1"></i>GPay</span>
+            <span class="brand-pill">🪷 PhonePe</span>
+            <span class="brand-pill">🎁 Paytm</span>
+            <span class="brand-pill">🇮🇳 BHIM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ Card ══════════════════════════════════════════════════════════ -->
+      <div id="panel-card" class="pay-panel d-none">
+        <div class="card-preview">
+          <div class="card-chip"></div>
+          <div class="card-num" id="previewNum">•••• •••• •••• ••••</div>
+          <div class="card-meta">
+            <div>
+              <div style="font-size:.58rem;opacity:.45;margin-bottom:.1rem">CARDHOLDER</div>
+              <div id="previewName">YOUR NAME</div>
+            </div>
+            <div class="text-end">
+              <div style="font-size:.58rem;opacity:.45;margin-bottom:.1rem">EXPIRES</div>
+              <div id="previewExpiry">MM/YY</div>
+            </div>
+            <div class="text-end">
+              <div style="font-size:.58rem;opacity:.45;margin-bottom:.1rem">NETWORK</div>
+              <div id="previewNet" style="font-size:.82rem;font-family:sans-serif">VISA</div>
+            </div>
+          </div>
+        </div>
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="form-floating">
+              <input type="text" class="form-control" id="cardNum" placeholder="Card Number" maxlength="19" inputmode="numeric" autocomplete="cc-number">
+              <label for="cardNum"><i class="bi bi-credit-card me-1"></i>Card Number</label>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="form-floating">
+              <input type="text" class="form-control" id="cardExp" placeholder="MM/YY" maxlength="5" inputmode="numeric" autocomplete="cc-exp">
+              <label for="cardExp">Expiry (MM/YY)</label>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="form-floating">
+              <input type="password" class="form-control" id="cardCvv" placeholder="CVV" maxlength="4" inputmode="numeric" autocomplete="cc-csc">
+              <label for="cardCvv"><i class="bi bi-lock me-1"></i>CVV</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="form-floating">
+              <input type="text" class="form-control" id="cardName" placeholder="Name" autocomplete="cc-name">
+              <label for="cardName"><i class="bi bi-person me-1"></i>Cardholder Name</label>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
+          <span class="brand-pill" style="color:#1a1f71;border-color:#c8d0e8">VISA</span>
+          <span class="brand-pill" style="color:#eb001b;border-color:#f5c6c6">MASTER</span>
+          <span class="brand-pill">💳 RuPay</span>
+          <span class="brand-pill">💳 Amex</span>
+        </div>
+      </div>
+
+      <!-- ══ Net Banking ════════════════════════════════════════════════════ -->
+      <div id="panel-netbanking" class="pay-panel d-none">
+        <p class="small text-muted mb-3">Select your bank</p>
+        <div class="row g-2">
+          <% [
+            { id:'sbi',   name:'State Bank of India', color:'#2196F3', abbr:'SBI'  },
+            { id:'hdfc',  name:'HDFC Bank',           color:'#e31837', abbr:'HDFC' },
+            { id:'icici', name:'ICICI Bank',           color:'#F68B1F', abbr:'ICICI'},
+            { id:'axis',  name:'Axis Bank',            color:'#97144D', abbr:'AXIS' },
+            { id:'kotak', name:'Kotak Mahindra',       color:'#EE3124', abbr:'KMB'  },
+            { id:'bob',   name:'Bank of Baroda',       color:'#F68B00', abbr:'BoB'  },
+          ].forEach(function(b){ %>
+          <div class="col-6">
+            <button class="bank-btn" data-bank="<%= b.id %>">
+              <div class="bank-ico" style="background:<%= b.color %>"><%= b.abbr.charAt(0) %></div>
+              <span><%= b.name %></span>
+            </button>
+          </div>
+          <% }); %>
+        </div>
+        <select class="form-select form-select-sm mt-3" id="bankOther">
+          <option value="">— or choose another bank —</option>
+          <option>Punjab National Bank</option>
+          <option>Canara Bank</option>
+          <option>Union Bank of India</option>
+          <option>Indian Bank</option>
+          <option>IDFC First Bank</option>
+          <option>Yes Bank</option>
+        </select>
+      </div>
+
+      <!-- ══ Cash ══════════════════════════════════════════════════════════ -->
+      <div id="panel-cash" class="pay-panel d-none">
+        <div class="text-center py-4">
+          <div style="font-size:3.5rem;line-height:1">💵</div>
+          <h5 class="mt-3 fw-bold">Pay at the Counter</h5>
+          <p class="text-muted small mb-3">Show your Order ID at the canteen counter and pay cash when collecting.</p>
+          <div class="upi-pill mb-3">
+            <i class="bi bi-receipt text-primary"></i>
+            Order: <strong><%= order.orderNumber %></strong>
+          </div>
+          <div class="alert alert-warning py-2 small text-start mb-0">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            Your order is confirmed after cash is collected at the counter.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Pay button + security ─────────────────────────────────────────── -->
+    <div class="px-4 pb-4 pt-3 border-top mt-3">
+      <button class="btn-pay" id="payBtn">
+        <span class="sp"></span>
+        <span class="lbl">Pay ₹<%= order.total.toFixed(2) %></span>
+      </button>
+      <div class="secure-row mt-2">
+        <i class="bi bi-shield-fill-check"></i><span>256-bit SSL</span>
+        <span class="mx-1">·</span>
+        <i class="bi bi-lock-fill"></i><span>Encrypted</span>
+        <span class="mx-1">·</span>
+        <span>PCI DSS Compliant</span>
+      </div>
+      <div class="text-center mt-3">
+        <a href="/orders/<%= order._id %>" class="small text-muted text-decoration-none">
+          <i class="bi bi-arrow-left me-1"></i>Back to order
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Success modal ──────────────────────────────────────────────────────── -->
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow-lg text-center p-4">
+      <div style="position:relative;width:78px;margin:0 auto 1rem">
+        <div class="success-circle"><i class="bi bi-check-lg fw-bold"></i></div>
+        <div class="success-ring"></div>
+      </div>
+      <h5 class="fw-bold mb-1">Payment Successful!</h5>
+      <p class="text-muted small mb-2">
+        ₹<%= order.total.toFixed(2) %> paid for<br>
+        <strong><%= order.orderNumber %></strong>
+      </p>
+      <div class="d-flex align-items-center justify-content-center gap-1 mb-3" style="color:#22c55e;font-size:.78rem">
+        <i class="bi bi-shield-fill-check"></i> Transaction Verified
+      </div>
+      <div class="progress mb-2" style="height:3px">
+        <div class="progress-bar bg-success" id="redirectBar" style="width:0%;transition:width 3s linear"></div>
+      </div>
+      <p class="text-muted" style="font-size:.72rem">Redirecting to your order…</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var orderId      = '<%= order._id.toString() %>';
+  var activeMethod = 'upi';
+
+  /* Tab switching */
+  document.querySelectorAll('.pay-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.pay-tab').forEach(function (b)  { b.classList.remove('active'); });
+      document.querySelectorAll('.pay-panel').forEach(function (p) { p.classList.add('d-none'); });
+      btn.classList.add('active');
+      activeMethod = btn.dataset.m;
+      document.getElementById('panel-' + activeMethod).classList.remove('d-none');
+    });
+  });
+
+  /* QR skeleton reveal */
+  setTimeout(function () {
+    var sh = document.getElementById('qrShimmer');
+    var qr = document.getElementById('qrReady');
+    if (sh) sh.style.display = 'none';
+    if (qr) qr.style.display = 'block';
+  }, 1100);
+
+  /* Copy UPI ID */
+  var copyBtn = document.getElementById('copyUpi');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', function () {
+      if (navigator.clipboard) navigator.clipboard.writeText('campuscanteen@upi');
+      copyBtn.innerHTML = '<i class="bi bi-check"></i>';
+      setTimeout(function () { copyBtn.innerHTML = '<i class="bi bi-copy"></i>'; }, 1500);
+    });
+  }
+
+  /* Countdown 2 min */
+  var secs  = 120;
+  var tNum  = document.getElementById('timerNum');
+  var tWrap = document.getElementById('timerWrap');
+  var tInt  = setInterval(function () {
+    secs--;
+    if (secs <= 0) { clearInterval(tInt); if (tNum) tNum.textContent = '00:00'; return; }
+    var m = Math.floor(secs / 60), s = secs % 60;
+    if (tNum) tNum.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    if (secs <= 30 && tWrap) tWrap.classList.add('urgent');
+  }, 1000);
+
+  /* Card live preview */
+  var fNum  = document.getElementById('cardNum');
+  var fName = document.getElementById('cardName');
+  var fExp  = document.getElementById('cardExp');
+  var pNum  = document.getElementById('previewNum');
+  var pName = document.getElementById('previewName');
+  var pExp  = document.getElementById('previewExpiry');
+  var pNet  = document.getElementById('previewNet');
+
+  if (fNum) fNum.addEventListener('input', function () {
+    var v = this.value.replace(/\D/g, '').substring(0, 16);
+    this.value = v.replace(/(.{4})/g, '$1 ').trim();
+    var full = (v + '················').substring(0, 16);
+    if (pNum) pNum.textContent = full.replace(/(.{4})/g, '$1 ').trim();
+    var f = v.charAt(0);
+    if (pNet) pNet.textContent = f==='4'?'VISA':f==='5'?'MASTER':f==='6'?'RUPAY':f==='3'?'AMEX':'CARD';
+  });
+  if (fName) fName.addEventListener('input', function () {
+    if (pName) pName.textContent = this.value.toUpperCase() || 'YOUR NAME';
+  });
+  if (fExp) fExp.addEventListener('input', function () {
+    var v = this.value.replace(/\D/g, '').substring(0, 4);
+    this.value = v.length >= 3 ? v.substring(0,2) + '/' + v.substring(2) : v;
+    if (pExp) pExp.textContent = this.value || 'MM/YY';
+  });
+
+  /* Bank selection */
+  document.querySelectorAll('.bank-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.bank-btn').forEach(function (b) { b.classList.remove('chosen'); });
+      btn.classList.add('chosen');
+    });
+  });
+
+  /* Pay button */
+  var payBtn = document.getElementById('payBtn');
+  payBtn.addEventListener('click', function () {
+    if (activeMethod === 'card') {
+      var n = fNum  ? fNum.value.replace(/\s/g,'') : '';
+      var e = fExp  ? fExp.value : '';
+      var c = document.getElementById('cardCvv') ? document.getElementById('cardCvv').value : '';
+      var h = fName ? fName.value.trim() : '';
+      if (n.length < 15) { showFieldError(fNum,  'Enter a valid card number'); return; }
+      if (e.length < 5)  { showFieldError(fExp,  'Enter expiry date'); return; }
+      if (c.length < 3)  { showFieldError(document.getElementById('cardCvv'), 'Enter CVV'); return; }
+      if (h.length < 2)  { showFieldError(fName, 'Enter cardholder name'); return; }
+    }
+    payBtn.classList.add('loading');
+    payBtn.querySelector('.lbl').textContent = 'Processing…';
+    setTimeout(function () {
+      fetch('/orders/' + orderId + '/pay', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMethod: activeMethod }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          payBtn.classList.remove('loading');
+          payBtn.querySelector('.lbl').textContent = 'Pay ₹<%= order.total.toFixed(2) %>';
+          if (d.ok) { clearInterval(tInt); showSuccess(d.redirect); }
+          else       { alert(d.error || 'Payment failed. Please try again.'); }
+        })
+        .catch(function () {
+          payBtn.classList.remove('loading');
+          payBtn.querySelector('.lbl').textContent = 'Pay ₹<%= order.total.toFixed(2) %>';
+          alert('Network error. Please try again.');
+        });
+    }, 1500);
+  });
+
+  function showFieldError(el, msg) {
+    if (!el) return;
+    el.classList.add('is-invalid');
+    var fb = el.parentElement.querySelector('.invalid-feedback');
+    if (!fb) { fb = document.createElement('div'); fb.className = 'invalid-feedback'; el.parentElement.appendChild(fb); }
+    fb.textContent = msg;
+    el.focus();
+    el.addEventListener('input', function clear() { el.classList.remove('is-invalid'); }, { once: true });
+  }
+
+  function showSuccess(url) {
+    var modal = new bootstrap.Modal(document.getElementById('successModal'));
+    modal.show();
+    setTimeout(function () {
+      var bar = document.getElementById('redirectBar');
+      if (bar) bar.style.width = '100%';
+    }, 80);
+    setTimeout(function () { window.location.href = url; }, 3300);
+  }
+})();
+</script>
+
+<%- include('../partials/layout_end') %>

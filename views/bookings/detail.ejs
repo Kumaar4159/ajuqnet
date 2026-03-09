@@ -1,0 +1,79 @@
+<%- include('../partials/layout_start') %>
+<div class="row g-3">
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Booking <span class="text-primary"><%= booking.bookingReference %></span></span>
+        <%- include('../partials/status_badge', { status: booking.status }) %>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tr><th class="text-muted fw-normal" width="140">Table</th><td><%= booking.table?.tableNumber %> (<%= booking.table?.section %>)</td></tr>
+          <tr><th class="text-muted fw-normal">Booked By</th><td><%= booking.bookedByName %> <span class="badge bg-secondary small"><%= booking.bookedByRole %></span></td></tr>
+          <tr><th class="text-muted fw-normal">Date</th><td><%= new Date(booking.date).toDateString() %></td></tr>
+          <tr><th class="text-muted fw-normal">Start</th><td><%= new Date(booking.startTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %></td></tr>
+          <tr><th class="text-muted fw-normal">End</th><td><%= new Date(booking.endTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %></td></tr>
+          <tr><th class="text-muted fw-normal">Duration</th><td><%= booking.durationMinutes %> min</td></tr>
+          <tr><th class="text-muted fw-normal">Guests</th><td><%= booking.guestCount %></td></tr>
+          <tr><th class="text-muted fw-normal">Purpose</th><td><%= booking.purpose %></td></tr>
+          <% if (booking.specialRequests) { %><tr><th class="text-muted fw-normal">Requests</th><td><%= booking.specialRequests %></td></tr><% } %>
+          <% if (booking.internalNote) { %><tr><th class="text-muted fw-normal">Note</th><td><%= booking.internalNote %></td></tr><% } %>
+        </table>
+      </div>
+    </div>
+
+    <!-- Status history -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold">History</div>
+      <div class="card-body py-2">
+        <% booking.statusHistory.forEach(h => { %>
+        <div class="d-flex align-items-start gap-2 py-2 border-bottom">
+          <%- include('../partials/status_badge', { status: h.status }) %>
+          <div class="small">
+            <span class="text-muted"><%= new Date(h.timestamp).toLocaleString() %></span>
+            by <strong><%= h.changedByName %></strong>
+            <% if (h.note) { %> — <%= h.note %><% } %>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <!-- Status transitions -->
+    <% const bTrans = { pending:['confirmed','cancelled'], confirmed:['checked_in','cancelled','no_show'], checked_in:['completed'], completed:[], cancelled:[], no_show:[] }; %>
+    <% const nextStatuses = bTrans[booking.status] || []; %>
+    <% const canUpdateStatus = userRole === 'canteen' || userRole === 'admin'; %>
+    <% if (nextStatuses.length > 0 && canUpdateStatus) { %>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 fw-semibold">Update Status</div>
+      <div class="card-body">
+        <form action="/bookings/<%= booking._id %>/status" method="POST">
+          <div class="mb-2">
+            <select name="status" class="form-select form-select-sm">
+              <% nextStatuses.forEach(s => { %><option value="<%= s %>"><%= s.replace(/_/g,' ').replace(/^\w/,c=>c.toUpperCase()) %></option><% }) %>
+            </select>
+          </div>
+          <div class="mb-2"><input type="text" name="note" class="form-control form-control-sm" placeholder="Note (optional)"></div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">Update</button>
+        </form>
+      </div>
+    </div>
+    <% } %>
+    <% if (!canUpdateStatus && booking.status === 'pending' && booking.bookedBy._id.toString() === userId) { %>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <form action="/bookings/<%= booking._id %>/status" method="POST">
+          <input type="hidden" name="status" value="cancelled">
+          <button type="submit" class="btn btn-outline-danger btn-sm w-100" onclick="return confirm('Cancel this booking?')">
+            <i class="bi bi-x-circle me-1"></i>Cancel Booking
+          </button>
+        </form>
+      </div>
+    </div>
+    <% } %>
+    <div><a href="/bookings" class="btn btn-outline-secondary btn-sm w-100">← Back</a></div>
+  </div>
+</div>
+<%- include('../partials/layout_end') %>

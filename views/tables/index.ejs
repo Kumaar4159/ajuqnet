@@ -1,0 +1,67 @@
+<%- include('../partials/layout_start') %>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form class="d-flex flex-wrap gap-2 align-items-center" method="GET">
+      <select name="section" class="form-select form-select-sm" style="width:150px">
+        <option value="">All sections</option>
+        <% sections.forEach(s => { %><option value="<%= s %>" <%=filter.section===s?'selected':''%>><%= s.charAt(0).toUpperCase()+s.slice(1) %></option><% }) %>
+      </select>
+      <select name="minCapacity" class="form-select form-select-sm" style="width:150px">
+        <option value="">Any capacity</option>
+        <% [2,4,6,8,10].forEach(n => { %><option value="<%= n %>" <%=parseInt(filter.minCapacity)===n?'selected':''%>>≥ <%= n %> seats</option><% }) %>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      <a href="/tables" class="btn btn-outline-secondary btn-sm">Reset</a>
+      <% if (user && user.role === 'admin') { %>
+        <a href="/tables/new" class="btn btn-success btn-sm ms-auto"><i class="bi bi-plus-lg me-1"></i>Add Table</a>
+      <% } %>
+    </form>
+  </div>
+</div>
+
+<% if (tables.length === 0) { %>
+  <div class="text-center py-5 text-muted"><i class="bi bi-grid-1x2 fs-1"></i><div class="mt-2">No tables found.</div></div>
+<% } else { %>
+<div class="row g-3">
+  <% tables.forEach(table => { %>
+  <div class="col-sm-6 col-lg-4 col-xl-3">
+    <div class="card border-0 shadow-sm h-100 table-card <%= table.isUnderMaintenance ? 'border-warning' : '' %>">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6 class="fw-bold mb-0"><%= table.tableNumber %></h6>
+          <% if (table.isUnderMaintenance) { %><span class="badge bg-warning text-dark"><i class="bi bi-tools me-1"></i>Maintenance</span><% } else if (!table.isActive) { %><span class="badge bg-secondary">Inactive</span><% } else if (bookedTableIds && bookedTableIds.includes(table._id.toString())) { %><span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Booked</span><% } else { %><span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Available</span><% } %>
+        </div>
+        <div class="small text-muted mb-1"><i class="bi bi-geo-alt me-1"></i><%= table.section.charAt(0).toUpperCase()+table.section.slice(1) %> · Floor <%= table.floor %></div>
+        <div class="small text-muted mb-2"><i class="bi bi-people me-1"></i>Capacity: <%= table.capacity %></div>
+        <% if (table.description) { %><p class="small text-muted mb-2"><%= table.description.substring(0,60) %></p><% } %>
+        <% if (table.amenities?.length) { %>
+        <div class="d-flex flex-wrap gap-1 mb-2">
+          <% table.amenities.forEach(a => { %><span class="badge bg-light text-dark border small"><%= a.replace(/_/g,' ') %></span><% }) %>
+        </div>
+        <% } %>
+        <div class="d-flex gap-1 mt-auto">
+          <a href="/bookings/new?tableId=<%= table._id %>" class="btn btn-sm flex-grow-1 <%= (!table.isActive||table.isUnderMaintenance) ? 'btn-secondary disabled' : (bookedTableIds&&bookedTableIds.includes(table._id.toString())) ? 'btn-danger disabled' : 'btn-primary' %>">
+            <i class="bi bi-calendar-plus me-1"></i><%= (bookedTableIds&&bookedTableIds.includes(table._id.toString())) ? 'Currently Booked' : 'Book' %>
+          </a>
+          <a href="/tables/<%= table._id %>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-eye"></i></a>
+          <% if (user && user.role === 'admin') { %>
+            <a href="/tables/<%= table._id %>/edit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a>
+          <% } %>
+        </div>
+        <% if (user && user.role==='admin') { %>
+        <form action="/tables/<%= table._id %>/maintenance" method="POST" class="mt-2">
+          <input type="hidden" name="isUnderMaintenance" value="<%= table.isUnderMaintenance ? '0' : '1' %>">
+          <button type="submit" class="btn btn-<%= table.isUnderMaintenance ? 'outline-success' : 'outline-warning' %> btn-sm w-100">
+            <i class="bi bi-<%= table.isUnderMaintenance ? 'check-circle' : 'tools' %> me-1"></i><%= table.isUnderMaintenance ? 'Mark Available' : 'Set Maintenance' %>
+          </button>
+        </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+</div>
+<% } %>
+
+<%- include('../partials/layout_end') %>

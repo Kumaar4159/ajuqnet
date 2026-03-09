@@ -1,0 +1,72 @@
+<%- include('../partials/layout_start') %>
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold">
+        <%= item ? 'Edit Menu Item' : 'Add Menu Item' %>
+      </div>
+      <div class="card-body">
+        <% if (error) { %><div class="alert alert-danger small"><%= error %></div><% } %>
+
+        <form action="<%= item ? '/menu/'+item._id+'/update' : '/menu' %>" method="POST">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Name *</label>
+              <input type="text" name="name" class="form-control" value="<%= item?.name||'' %>" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Category *</label>
+              <select name="category" class="form-select" required>
+                <% ['breakfast','lunch','dinner','snacks','beverages','desserts','specials'].forEach(c => { %>
+                  <option value="<%= c %>" <%=item?.category===c?'selected':''%>><%= c.charAt(0).toUpperCase()+c.slice(1) %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Price (₹) *</label>
+              <input type="number" name="price" class="form-control" step="0.5" min="0" value="<%= item?.price||'' %>" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Prep Time (min)</label>
+              <input type="number" name="preparationTime" class="form-control" min="1" value="<%= item?.preparationTime||15 %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Stock (blank = unlimited)</label>
+              <input type="number" name="stock" class="form-control" min="0" value="<%= item?.stock!=null?item.stock:'' %>">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Description</label>
+              <textarea name="description" class="form-control" rows="2" maxlength="500"><%= item?.description||'' %></textarea>
+            </div>
+            <div class="col-6">
+              <div class="form-check">
+                <input type="checkbox" name="isVegetarian" class="form-check-input" id="veg" value="1" <%=item?.isVegetarian?'checked':''%>>
+                <label class="form-check-label" for="veg">🟢 Vegetarian</label>
+              </div>
+            </div>
+            <% if (item) { %>
+            <div class="col-6">
+              <div class="form-check">
+                <input type="checkbox" name="isAvailable" class="form-check-input" id="avail" value="1" <%=item?.isAvailable!==false?'checked':''%>>
+```
+
+---
+
+**Why this matters:** When you navigate to `/menu/new` to add a new item, the route passes `item: null` to the template. EJS then tries to evaluate `item.isAvailable` — reading a property on `null` — and throws:
+```
+TypeError: Cannot read properties of null (reading 'isAvailable')
+                <label class="form-check-label" for="avail">Available</label>
+              </div>
+            </div>
+            <% } %>
+            <div class="col-12 d-flex gap-2 mt-2">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i><%= item ? 'Save Changes' : 'Add Item' %></button>
+              <a href="/menu" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/layout_end') %>

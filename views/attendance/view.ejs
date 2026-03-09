@@ -1,0 +1,172 @@
+<%- include('../partials/layout_start') %>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fs-1 fw-bold <%= summary.pct !== null && summary.pct < 75 ? 'text-danger' : 'text-success' %>">
+        <%= summary.pct !== null ? summary.pct + '%' : '—' %>
+      </div>
+      <div class="text-muted small">Overall Attendance</div>
+      <% if (summary.pct !== null && summary.pct < 75) { %>
+      <div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Below 75%</div>
+      <% } %>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fs-1 fw-bold text-primary"><%= summary.present %></div>
+      <div class="text-muted small">Classes Attended</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fs-1 fw-bold text-secondary"><%= summary.total %></div>
+      <div class="text-muted small">Total Classes</div>
+    </div>
+  </div>
+</div>
+
+<% if (summary.subjects.length > 1) { %>
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a href="/attendance/view"
+     class="btn btn-sm <%= !subject ? 'btn-primary' : 'btn-outline-secondary' %>">All Subjects</a>
+  <% summary.subjects.forEach(function(s) { %>
+  <a href="/attendance/view?subject=<%= encodeURIComponent(s.name) %>"
+     class="btn btn-sm <%= subject === s.name ? 'btn-primary' : 'btn-outline-secondary' %>">
+    <%= s.name %>
+  </a>
+  <% }) %>
+</div>
+<% } %>
+
+<% if (summary.subjects.length) { %>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-0 fw-semibold">Subject-wise Breakdown</div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Subject</th>
+          <th class="text-center">Attended</th>
+          <th class="text-center">Total</th>
+          <th>Attendance</th>
+          <th class="text-center">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% summary.subjects.forEach(function(s) { %>
+        <tr>
+          <td class="fw-semibold small"><%= s.name %></td>
+          <td class="text-center"><%= s.present %></td>
+          <td class="text-center"><%= s.total %></td>
+          <td style="width:180px">
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height:6px">
+                <div class="progress-bar <%= s.pct >= 75 ? 'bg-success' : 'bg-danger' %>"
+                     style="width:<%= s.pct %>%"></div>
+              </div>
+              <span class="small fw-semibold <%= s.pct < 75 ? 'text-danger' : 'text-success' %>">
+                <%= s.pct %>%
+              </span>
+            </div>
+          </td>
+          <td class="text-center">
+            <% if (s.pct >= 75) { %>
+              <span class="badge bg-success-subtle text-success border border-success-subtle">Good</span>
+            <% } else if (s.pct >= 60) { %>
+              <span class="badge bg-warning-subtle text-warning border border-warning-subtle">At Risk</span>
+            <% } else { %>
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Low</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-0 fw-semibold d-flex justify-content-between align-items-center">
+    <span>Recent Records <span class="text-muted small fw-normal">(last 60 days)</span></span>
+    <span class="badge bg-secondary-subtle text-secondary"><%= records.length %></span>
+  </div>
+  <% if (records.length) { %>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 small align-middle">
+      <thead class="table-light">
+        <tr><th>Date</th><th>Subject</th><th class="text-center">Status</th><th>Note</th></tr>
+      </thead>
+      <tbody>
+        <% records.forEach(function(r) { %>
+        <tr>
+          <td class="text-muted">
+            <%= new Date(r.date).toLocaleDateString([], {weekday:'short',year:'numeric',month:'short',day:'numeric'}) %>
+          </td>
+          <td class="fw-semibold"><%= r.subject %></td>
+          <td class="text-center">
+            <% var col = {present:'success',absent:'danger',late:'warning'}[r.status]; %>
+            <span class="badge bg-<%= col %>-subtle text-<%= col %> border border-<%= col %>-subtle">
+              <%= r.status.charAt(0).toUpperCase() + r.status.slice(1) %>
+            </span>
+          </td>
+          <td class="text-muted"><%= r.note || '—' %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } else { %>
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-calendar-x fs-1 d-block mb-2 opacity-25"></i>
+    No attendance records found.
+  </div>
+  <% } %>
+</div>
+
+<% if (summary && summary.subjects && summary.subjects.length) { %>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  var subjects = <%- JSON.stringify(summary.subjects.map(s=>s.name)) %>;
+  var pcts     = <%- JSON.stringify(summary.subjects.map(s=>s.pct)) %>;
+  var presents = <%- JSON.stringify(summary.subjects.map(s=>s.present)) %>;
+  var absents  = <%- JSON.stringify(summary.subjects.map(s=>s.total-s.present)) %>;
+  var totalP   = <%= summary.present %>;
+  var totalA   = <%= summary.total - summary.present %>;
+
+  new Chart(document.getElementById('myDoughnut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Present','Absent'],
+      datasets:[{ data:[totalP,totalA], backgroundColor:['#22c55e','#ef4444'], borderWidth:0 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } }
+    }
+  });
+
+  new Chart(document.getElementById('myBar'), {
+    type: 'bar',
+    data: {
+      labels: subjects,
+      datasets:[
+        { label:'Present', data:presents, backgroundColor:'#22c55e' },
+        { label:'Absent',  data:absents,  backgroundColor:'#ef4444' }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } },
+      scales:{
+        x:{ stacked:true, ticks:{ font:{ size:10 } } },
+        y:{ stacked:true, ticks:{ stepSize:1 } }
+      }
+    }
+  });
+})();
+</script>
+<% } %>
+<%- include('../partials/layout_end') %>

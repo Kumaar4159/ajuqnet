@@ -1,0 +1,10 @@
+<%
+const map = {
+  pending: 'warning', confirmed: 'info', preparing: 'primary',
+  ready: 'success', delivered: 'secondary', cancelled: 'danger',
+  checked_in: 'success', completed: 'secondary', no_show: 'dark',
+  admin: 'danger', faculty: 'primary', student: 'success',
+  active: 'success', inactive: 'secondary', locked: 'warning',
+};
+const cls = map[status] || 'secondary';
+%><span class="badge bg-<%= cls %>"><%= status.replace(/_/g,' ') %></span>

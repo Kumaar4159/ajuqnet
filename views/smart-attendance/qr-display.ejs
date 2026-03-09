@@ -1,0 +1,191 @@
+<%- include('../partials/layout_start') %>
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <div class="d-flex align-items-center gap-2">
+    <div class="stat-icon bg-success-subtle text-success rounded-3 fs-4">
+      <i class="bi bi-qr-code-scan"></i>
+    </div>
+    <div>
+      <h5 class="mb-0 fw-bold">Class QR Code</h5>
+      <div class="text-muted small"><%= session.subject %> · <%= session.room %> · <%= session.semester %></div>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <span class="badge bg-success fs-6 px-3 py-2" id="sessionStatusBadge">
+      <i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Active
+    </span>
+    <button class="btn btn-outline-danger btn-sm" id="closeSessionBtn" data-id="<%= session._id %>">
+      <i class="bi bi-x-circle me-1"></i>End Session
+    </button>
+  </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+
+  <!-- QR code card -->
+  <div class="col-lg-5 col-md-7">
+    <div class="card border-0 shadow text-center">
+      <div class="card-body p-4">
+        <div id="qrExpiredOverlay" class="d-none position-relative mb-3">
+          <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+               style="background:rgba(255,255,255,.85);z-index:10;border-radius:.5rem">
+            <div>
+              <div class="text-danger fs-1"><i class="bi bi-clock-history"></i></div>
+              <div class="fw-bold text-danger">QR Expired</div>
+              <a href="/smart-attendance/start-session" class="btn btn-primary btn-sm mt-2">New Session</a>
+            </div>
+          </div>
+        </div>
+        <img src="<%= qrDataUrl %>" alt="Attendance QR Code" class="img-fluid rounded-3 mb-3" id="qrImage" style="max-width:300px">
+        <div class="fw-bold fs-5"><%= session.subject %></div>
+        <div class="text-muted small"><%= session.department %> · <%= session.semester %></div>
+        <div class="text-muted small"><i class="bi bi-door-open me-1"></i><%= session.room %></div>
+
+        <div class="mt-3 p-3 rounded-3" style="background:var(--body-bg)">
+          <div class="text-muted small mb-1">QR expires in</div>
+          <div class="fw-bold fs-4 text-primary" id="countdown">--:--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Print hint -->
+    <div class="text-center mt-3">
+      <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>Print QR
+      </button>
+      <a href="/smart-attendance/my-sessions" class="btn btn-outline-secondary btn-sm ms-2">
+        <i class="bi bi-list-ul me-1"></i>All Sessions
+      </a>
+    </div>
+  </div>
+
+  <!-- Live stats panel -->
+  <div class="col-lg-4 col-md-5">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-people-fill text-primary me-1"></i> Live Attendance
+      </div>
+      <div class="card-body text-center py-4">
+        <div class="display-4 fw-bold text-success" id="presentCount">0</div>
+        <div class="text-muted">students marked present</div>
+        <hr>
+        <div class="text-muted small" id="totalCount">0 total attempts</div>
+        <div class="mt-3">
+          <div class="progress" style="height:10px">
+            <div class="progress-bar bg-success" id="attendanceBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-info-circle text-info me-1"></i> Session Info
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><td class="text-muted ps-3">Faculty</td><td class="fw-semibold"><%= session.facultyName %></td></tr>
+            <tr><td class="text-muted ps-3">Duration</td><td class="fw-semibold"><%= session.durationMinutes %> min</td></tr>
+            <tr><td class="text-muted ps-3">Started</td><td class="fw-semibold"><%= new Date(session.startTime).toLocaleTimeString() %></td></tr>
+            <tr>
+              <td class="text-muted ps-3">GPS</td>
+              <td class="fw-semibold">
+                <% if (session.teacherLocation && session.teacherLocation.lat) { %>
+                  <span class="text-success"><i class="bi bi-geo-alt-fill"></i> Set</span>
+                <% } else { %>
+                  <span class="text-warning"><i class="bi bi-geo-alt"></i> Not set</span>
+                <% } %>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <a href="/smart-attendance/faculty-report/<%= session._id %>" class="card border-0 shadow-sm text-decoration-none text-dark hover-lift d-block">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-info-subtle text-info rounded-3 fs-5"><i class="bi bi-bar-chart-fill"></i></div>
+        <div>
+          <div class="fw-semibold">View Full Report</div>
+          <div class="text-muted small">See who's present and who's absent</div>
+        </div>
+        <i class="bi bi-chevron-right ms-auto text-muted"></i>
+      </div>
+    </a>
+  </div>
+</div>
+
+<script>
+(function () {
+  const SESSION_ID  = '<%= session._id %>';
+  const EXPIRES_AT  = new Date('<%= new Date(session.startTime).getTime() + session.durationMinutes * 60 * 1000 %>');
+
+  // ── Countdown ──────────────────────────────────────────────────────────────
+  function updateCountdown() {
+    const remaining = EXPIRES_AT - Date.now();
+    if (remaining <= 0) {
+      document.getElementById('countdown').textContent = 'Expired';
+      document.getElementById('countdown').className = 'fw-bold fs-4 text-danger';
+      document.getElementById('sessionStatusBadge').className = 'badge bg-secondary fs-6 px-3 py-2';
+      document.getElementById('sessionStatusBadge').innerHTML = 'Expired';
+      document.getElementById('qrExpiredOverlay').classList.remove('d-none');
+      return;
+    }
+    const m = Math.floor(remaining / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
+    document.getElementById('countdown').textContent =
+      String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+
+  // ── Live attendance poll every 5 seconds ──────────────────────────────────
+  async function pollAttendance() {
+    try {
+      const r = await fetch('/smart-attendance/api/session-status/' + SESSION_ID);
+      const d = await r.json();
+      if (!d.ok) return;
+      document.getElementById('presentCount').textContent = d.present;
+      document.getElementById('totalCount').textContent   = d.total + ' total attempts';
+      const pct = d.total > 0 ? Math.round(d.present / d.total * 100) : 0;
+      document.getElementById('attendanceBar').style.width = pct + '%';
+
+      if (d.status === 'closed' || d.isExpired) {
+        document.getElementById('sessionStatusBadge').className = 'badge bg-secondary fs-6 px-3 py-2';
+        document.getElementById('sessionStatusBadge').innerHTML = 'Closed';
+      }
+    } catch (e) { /* silent */ }
+  }
+  pollAttendance();
+  setInterval(pollAttendance, 5000);
+
+  // ── End session button ────────────────────────────────────────────────────
+  document.getElementById('closeSessionBtn').addEventListener('click', async function () {
+    if (!confirm('End this session early? The QR code will stop working immediately.')) return;
+    this.disabled = true;
+    try {
+      const r = await fetch('/smart-attendance/close/' + SESSION_ID, { method: 'POST' });
+      const d = await r.json();
+      if (d.ok) {
+        document.getElementById('sessionStatusBadge').className = 'badge bg-secondary fs-6 px-3 py-2';
+        document.getElementById('sessionStatusBadge').innerHTML = 'Closed';
+        document.getElementById('qrExpiredOverlay').classList.remove('d-none');
+        this.textContent = 'Session Ended';
+      }
+    } catch (e) {
+      this.disabled = false;
+    }
+  });
+}());
+</script>
+
+<style>
+@media print {
+  #sidebar, header, .topbar, #closeSessionBtn, .btn { display: none !important; }
+  .card { box-shadow: none !important; border: 1px solid #ccc !important; }
+  #qrImage { max-width: 250px !important; }
+}
+</style>
+
+<%- include('../partials/layout_end') %>

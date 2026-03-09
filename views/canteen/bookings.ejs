@@ -1,0 +1,75 @@
+<%- include('../partials/layout_start') %>
+
+<div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+  <form action="/canteen/bookings" method="GET" class="d-flex align-items-center gap-2">
+    <label class="fw-semibold small mb-0">Date:</label>
+    <input type="date" name="date" value="<%= selectedDate %>"
+           class="form-control form-control-sm" style="width:160px"
+           onchange="this.form.submit()">
+  </form>
+  <span class="text-muted small ms-auto"><%= total %> booking(s)</span>
+</div>
+
+<% if (bookings.length === 0) { %>
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-calendar-x fs-1"></i>
+    <div class="mt-2">No bookings found for <strong><%= selectedDate %></strong>.</div>
+  </div>
+<% } else { %>
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-0 fw-semibold">
+    <i class="bi bi-calendar2-week-fill text-info me-1"></i>
+    Table Bookings — <%= selectedDate %>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr><th>Reference</th><th>Student / User</th><th>Table #</th><th>Time Slot</th><th class="text-center">Guests</th><th>Purpose</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <% bookings.forEach(function(b) { %>
+        <tr>
+          <td class="fw-semibold small text-primary"><%= b.bookingReference %></td>
+          <td>
+            <div class="fw-semibold small"><%= b.bookedByName %></div>
+            <div class="text-muted" style="font-size:.72rem"><%= b.bookedBy ? b.bookedBy.email : '' %></div>
+            <% if (b.bookedBy && b.bookedBy.studentId) { %>
+            <div class="text-muted" style="font-size:.7rem"><i class="bi bi-person-badge me-1"></i><%= b.bookedBy.studentId %></div>
+            <% } %>
+          </td>
+          <td>
+            <span class="badge bg-secondary">#<%= b.tableNumber %></span>
+            <% if (b.table && b.table.capacity) { %>
+            <div class="text-muted mt-1" style="font-size:.7rem">Cap: <%= b.table.capacity %></div>
+            <% } %>
+          </td>
+          <td class="small">
+            <div class="fw-semibold">
+              <%= new Date(b.startTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %>
+              &rarr;
+              <%= new Date(b.endTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %>
+            </div>
+            <div class="text-muted" style="font-size:.7rem"><%= b.durationMinutes %> min</div>
+          </td>
+          <td class="text-center fw-semibold"><%= b.guestCount %></td>
+          <td class="small text-muted"><%= b.purpose || '—' %></td>
+          <td><%- include('../partials/status_badge', { status: b.status }) %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<% if (pages > 1) { %>
+<nav class="mt-3"><ul class="pagination pagination-sm justify-content-center">
+  <% for (let i = 1; i <= pages; i++) { %>
+  <li class="page-item <%= page === i ? 'active' : '' %>">
+    <a class="page-link" href="/canteen/bookings?page=<%= i %>&date=<%= selectedDate %>"><%= i %></a>
+  </li>
+  <% } %>
+</ul></nav>
+<% } %>
+<% } %>
+
+<%- include('../partials/layout_end') %>

@@ -1,0 +1,225 @@
+<%- include('../partials/layout_start') %>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold">
+        <i class="bi bi-search me-1 text-muted"></i>Select Student
+      </div>
+      <div class="card-body">
+        <form action="/attendance/report" method="GET">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Student</label>
+            <select name="studentId" class="form-select form-select-sm" onchange="this.form.submit()">
+              <option value="">— Choose a student —</option>
+              <% students.forEach(function(s) { %>
+              <option value="<%= s._id %>"
+                      <%= selectedStudentId === s._id.toString() ? 'selected' : '' %>>
+                <%= s.name %><%= s.studentId ? ' (' + s.studentId + ')' : '' %><%= s.semester ? ' · Sem ' + s.semester : '' %>
+              </option>
+              <% }) %>
+            </select>
+          </div>
+          <% if (selectedStudentId) { %>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Filter by Subject</label>
+            <input type="text" name="subject" value="<%= subject %>"
+                   class="form-control form-control-sm" placeholder="Leave blank for all">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-funnel me-1"></i>Filter
+          </button>
+          <% } %>
+        </form>
+      </div>
+    </div>
+
+    <% if (selectedStudent) { %>
+    <div class="card border-0 shadow-sm mt-3">
+      <div class="card-header bg-transparent border-0 fw-semibold">Student Info</div>
+      <div class="card-body small">
+        <div class="mb-1"><span class="text-muted">Name:</span> <%= selectedStudent.name %></div>
+        <div class="mb-1"><span class="text-muted">Email:</span> <%= selectedStudent.email %></div>
+        <% if (selectedStudent.department) { %>
+        <div class="mb-1"><span class="text-muted">Dept:</span> <%= selectedStudent.department %></div>
+        <% } %>
+        <% if (selectedStudent.studentId) { %>
+        <div><span class="text-muted">ID:</span> <%= selectedStudent.studentId %></div>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+  </div>
+
+  <div class="col-lg-8">
+    <% if (!selectedStudentId) { %>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-person-lines-fill fs-1 d-block mb-2 opacity-25"></i>
+        Select a student from the left panel to view their attendance report.
+      </div>
+    </div>
+
+    <% } else if (summary) { %>
+    <div class="row g-2 mb-3">
+      <div class="col-4">
+        <div class="card border-0 shadow-sm text-center py-2">
+          <div class="fs-2 fw-bold <%= summary.pct !== null && summary.pct < 75 ? 'text-danger' : 'text-success' %>">
+            <%= summary.pct !== null ? summary.pct + '%' : '—' %>
+          </div>
+          <div class="text-muted" style="font-size:.75rem">Overall</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card border-0 shadow-sm text-center py-2">
+          <div class="fs-2 fw-bold text-primary"><%= summary.present %></div>
+          <div class="text-muted" style="font-size:.75rem">Present</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card border-0 shadow-sm text-center py-2">
+          <div class="fs-2 fw-bold text-secondary"><%= summary.total %></div>
+          <div class="text-muted" style="font-size:.75rem">Total</div>
+        </div>
+      </div>
+    </div>
+
+    <% if (summary.subjects.length) { %>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 fw-semibold small">Subject Breakdown</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light">
+            <tr><th>Subject</th><th class="text-center">Attended</th><th class="text-center">Total</th><th>%</th></tr>
+          </thead>
+          <tbody>
+            <% summary.subjects.forEach(function(s) { %>
+            <tr>
+              <td class="small fw-semibold"><%= s.name %></td>
+              <td class="text-center small"><%= s.present %></td>
+              <td class="text-center small"><%= s.total %></td>
+              <td>
+                <div class="d-flex align-items-center gap-1">
+                  <div class="progress flex-grow-1" style="height:5px;min-width:50px">
+                    <div class="progress-bar <%= s.pct >= 75 ? 'bg-success' : 'bg-danger' %>"
+                         style="width:<%= s.pct %>%"></div>
+                  </div>
+                  <span class="small fw-semibold <%= s.pct < 75 ? 'text-danger' : 'text-success' %>">
+                    <%= s.pct %>%
+                  </span>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold small d-flex justify-content-between">
+        <span>Attendance Records</span>
+        <span class="badge bg-secondary-subtle text-secondary"><%= records.length %></span>
+      </div>
+      <% if (records.length) { %>
+      <div class="table-responsive" style="max-height:380px;overflow-y:auto">
+        <table class="table table-hover table-sm mb-0 align-middle">
+          <thead class="table-light sticky-top">
+            <tr><th>Date</th><th>Subject</th><th class="text-center">Status</th><th>Marked by</th><th>Note</th></tr>
+          </thead>
+          <tbody>
+            <% records.forEach(function(r) { %>
+            <tr>
+              <td class="small text-muted">
+                <%= new Date(r.date).toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'}) %>
+              </td>
+              <td class="small fw-semibold"><%= r.subject %></td>
+              <td class="text-center">
+                <% var col = {present:'success',absent:'danger',late:'warning'}[r.status]; %>
+                <span class="badge bg-<%= col %>-subtle text-<%= col %> border border-<%= col %>-subtle"
+                      style="font-size:.65rem">
+                  <%= r.status %>
+                </span>
+              </td>
+              <td class="small text-muted"><%= r.markedByName %></td>
+              <td class="small text-muted"><%= r.note || '—' %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } else { %>
+      <div class="text-center py-4 text-muted small">No records found.</div>
+      <% } %>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<% if (summary && summary.subjects && summary.subjects.length) { %>
+<div class="row g-3 mt-1">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold small">Present vs Absent</div>
+      <div class="card-body" style="height:220px;position:relative">
+        <canvas id="doughnutChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold small">Subject-wise Breakdown</div>
+      <div class="card-body" style="height:220px;position:relative">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  var subjects  = <%- JSON.stringify(summary.subjects.map(s=>s.name)) %>;
+  var presents  = <%- JSON.stringify(summary.subjects.map(s=>s.present)) %>;
+  var absents   = <%- JSON.stringify(summary.subjects.map(s=>s.total-s.present)) %>;
+  var pcts      = <%- JSON.stringify(summary.subjects.map(s=>s.pct)) %>;
+  var totalP    = <%= summary.present %>;
+  var totalA    = <%= summary.total - summary.present %>;
+
+  // Doughnut
+  new Chart(document.getElementById('doughnutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Present', 'Absent'],
+      datasets: [{ data: [totalP, totalA],
+        backgroundColor: ['#22c55e','#ef4444'], borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+    }
+  });
+
+  // Bar chart
+  new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: subjects,
+      datasets: [
+        { label: 'Present', data: presents, backgroundColor: '#22c55e' },
+        { label: 'Absent',  data: absents,  backgroundColor: '#ef4444' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 10 } } },
+        y: { stacked: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+})();
+</script>
+<% } %>
+<%- include('../partials/layout_end') %>

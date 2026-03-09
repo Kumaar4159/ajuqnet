@@ -1,0 +1,189 @@
+<%- include('../partials/layout_start') %>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Order <span class="text-primary"><%= order.orderNumber %></span></span>
+        <%- include('../partials/status_badge', { status: order.status }) %>
+      </div>
+      <div class="card-body p-0">
+        <table class="table mb-0">
+          <thead class="table-light"><tr><th>Item</th><th class="text-center">Qty</th><th class="text-end">Subtotal</th></tr></thead>
+          <tbody>
+            <% order.items.forEach(item => { %>
+            <tr>
+              <td>
+                <%= item.name %>
+                <% if (item.specialInstructions) { %><br><small class="text-muted"><%= item.specialInstructions %></small><% } %>
+              </td>
+              <td class="text-center"><%= item.quantity %></td>
+              <td class="text-end">₹<%= item.subtotal.toFixed(2) %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+          <tfoot class="table-light">
+            <tr><td colspan="2" class="text-end text-muted small">Subtotal</td><td class="text-end">₹<%= order.subtotal.toFixed(2) %></td></tr>
+            <tr><td colspan="2" class="text-end text-muted small">Tax (5%)</td><td class="text-end">₹<%= order.tax.toFixed(2) %></td></tr>
+            <tr><td colspan="2" class="text-end fw-bold">Total</td><td class="text-end fw-bold text-primary">₹<%= order.total.toFixed(2) %></td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Status history -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold">Status History</div>
+      <div class="card-body py-2">
+        <% order.statusHistory.forEach(h => { %>
+        <div class="d-flex align-items-start gap-2 py-2 border-bottom">
+          <div class="mt-1"><%- include('../partials/status_badge', { status: h.status }) %></div>
+          <div class="small">
+            <span class="text-muted"><%= new Date(h.timestamp).toLocaleString() %></span>
+            by <strong><%= h.changedByName %></strong>
+            <% if (h.note) { %> — <%= h.note %><% } %>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions sidebar -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 fw-semibold">Details</div>
+      <div class="card-body small">
+        <div class="mb-1"><span class="text-muted">Placed by:</span> <%= order.placedByName %></div>
+        <div class="mb-1"><span class="text-muted">Role:</span> <%= order.placedByRole %></div>
+        <div class="mb-1"><span class="text-muted">Date:</span> <%= new Date(order.createdAt).toLocaleString() %></div>
+        <% if (order.deliveryLocation) { %><div class="mb-1"><span class="text-muted">Delivery:</span> <%= order.deliveryLocation %></div><% } %>
+        <% if (order.notes) { %><div class="mb-1"><span class="text-muted">Notes:</span> <%= order.notes %></div><% } %>
+        <% if (order.estimatedReadyAt) { %><div><span class="text-muted">Est. Ready:</span> <%= new Date(order.estimatedReadyAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %></div><% } %>
+      </div>
+    </div>
+<% if (order.paymentStatus !== 'paid' && order.status !== 'cancelled' && order.status !== 'delivered') { %>
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body text-center py-3">
+    <div class="text-muted small mb-2">
+      <i class="bi bi-exclamation-circle me-1"></i>Payment pending
+    </div>
+    <a href="/orders/<%= order._id %>/pay" class="btn btn-primary w-100">
+      <i class="bi bi-credit-card me-1"></i>Pay ₹<%= order.total.toFixed(2) %>
+    </a>
+  </div>
+</div>
+<% } %>
+<% if (order.paymentStatus === 'paid') { %>
+<div class="alert alert-success py-2 small text-center">
+  <i class="bi bi-shield-fill-check me-1"></i>
+  Payment confirmed via <%= order.paymentMethod ? order.paymentMethod.toUpperCase() : 'N/A' %>
+</div>
+<% } %>
+
+    <!-- Status transitions -->
+    <% const transitions = { pending:['confirmed','cancelled'], confirmed:['preparing','cancelled'], preparing:['ready','cancelled'], ready:['delivered'], delivered:[], cancelled:[] }; %>
+<% const roleAllowed = { admin:['confirmed','preparing','ready','delivered','cancelled'], canteen:['confirmed','preparing','ready','delivered'], student:['cancelled'], faculty:[] }; %>
+<% const allowedNext = (transitions[order.status] || []).filter(s => (roleAllowed[userRole]||[]).includes(s)); %>
+    <% if (allowedNext.length > 0) { %>
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold">Update Status</div>
+      <div class="card-body">
+        <form action="/orders/<%= order._id %>/status" method="POST">
+          <div class="mb-2">
+            <select name="status" class="form-select form-select-sm">
+              <% allowedNext.forEach(s => { %><option value="<%= s %>"><%= s.charAt(0).toUpperCase()+s.slice(1) %></option><% }) %>
+            </select>
+          </div>
+          <div class="mb-2">
+            <input type="text" name="note" class="form-control form-control-sm" placeholder="Note (optional)">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">Update</button>
+        </form>
+      </div>
+    </div>
+    <% } %>
+    <div class="mt-2"><a href="/orders" class="btn btn-outline-secondary btn-sm w-100">← Back to Orders</a></div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function () {
+  var colourMap = {
+    pending: 'warning', confirmed: 'info', preparing: 'primary',
+    ready: 'success', delivered: 'secondary', cancelled: 'danger',
+  };
+
+  function makeBadge(status) {
+    var cls = colourMap[status] || 'secondary';
+    var label = status.charAt(0).toUpperCase() + status.slice(1);
+    return '<span class="badge bg-' + cls + '">' + label + '</span>';
+  }
+
+  var orderId = window.location.pathname.split('/').filter(Boolean).pop();
+  var socket = io({ transports: ['websocket', 'polling'] });
+
+  socket.on('connect', function () {
+    console.log('[order] socket connected:', socket.id);
+  });
+
+  socket.on('order:statusUpdate', function (data) {
+    if (data.orderId !== orderId) return;
+
+    // 1. Update the status badge in the card header
+    var headerBadge = document.querySelector('.card-header .badge');
+    if (headerBadge) headerBadge.outerHTML = makeBadge(data.status);
+
+    // 2. Append a new row to the status history list
+    var historyCards = document.querySelectorAll('.col-lg-8 .card');
+    if (historyCards.length >= 2) {
+      var historyBody = historyCards[1].querySelector('.card-body');
+      if (historyBody) {
+        var ts  = new Date(data.timestamp).toLocaleString();
+        var note = data.note ? ' \u2014 ' + data.note : '';
+        var row = document.createElement('div');
+        row.className = 'animate-in d-flex align-items-start gap-2 py-2 border-bottom';
+        row.innerHTML =
+          '<div class="mt-1">' + makeBadge(data.status) + '</div>' +
+          '<div class="small">' +
+            '<span class="text-muted">' + ts + '</span>' +
+            ' by <strong>' + data.changedByName + '</strong>' +
+            note +
+          '</div>';
+        historyBody.appendChild(row);
+      }
+    }
+
+    // 3. Hide "Update Status" form if terminal status reached
+    if (['delivered', 'cancelled'].includes(data.status)) {
+      var updateCard = document.querySelector('.col-lg-4 form');
+      if (updateCard) updateCard.closest('.card').remove();
+    }
+
+    // 4. Show a live update banner
+    var banner = document.getElementById('liveUpdateBanner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'liveUpdateBanner';
+      banner.className = 'alert alert-info alert-sm py-2 px-3 mb-3 small d-flex align-items-center gap-2';
+      banner.innerHTML = '<i class="bi bi-arrow-repeat"></i> <span id="liveUpdateMsg"></span>';
+      document.querySelector('.row').insertAdjacentElement('beforebegin', banner);
+    }
+    document.getElementById('liveUpdateMsg').textContent =
+      'Status updated to \u201c' + data.status + '\u201d by ' + data.changedByName + ' \u2014 just now';
+    banner.style.display = 'flex';
+  });
+
+  socket.on('connect_error', function (err) {
+    console.warn('[order] socket error:', err.message);
+  });
+})();
+</script>
+
+<style>
+@keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.animate-in { animation: slideIn .3s ease; }
+</style>
+
+<%- include('../partials/layout_end') %>

@@ -1,0 +1,53 @@
+<header class="topbar d-flex align-items-center px-3 gap-3">
+  <button class="btn btn-sm btn-outline-secondary d-md-none" id="sidebarToggle" aria-label="Toggle sidebar">
+    <i class="bi bi-list fs-5"></i>
+  </button>
+  <h1 class="topbar-title mb-0"><%= typeof title !== 'undefined' ? title : 'Campus System' %></h1>
+  <div class="ms-auto d-flex align-items-center gap-2">
+
+    <!-- ── Notification bell ──────────────────────────────────────────── -->
+    <% if (typeof user !== 'undefined' && user) { %>
+    <div class="notif-wrapper" id="notifWrapper">
+      <button id="notifBell" class="notif-bell" aria-label="Notifications" title="Notifications">
+        <i class="bi bi-bell-fill"></i>
+        <span class="notif-badge d-none" id="notifBadge">0</span>
+      </button>
+
+      <div class="notif-dropdown d-none" id="notifDropdown" role="dialog" aria-label="Notifications">
+        <div class="notif-header d-flex align-items-center justify-content-between px-3 py-2">
+          <span class="fw-semibold small">Notifications</span>
+          <div class="d-flex gap-2">
+            <button class="btn-xs" id="markAllRead" title="Mark all read">
+              <i class="bi bi-check2-all"></i> Mark all read
+            </button>
+            <button class="btn-xs" id="clearRead" title="Clear read">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </div>
+        </div>
+        <ul class="notif-list" id="notifList">
+          <li class="notif-empty text-muted small text-center py-4">
+            <i class="bi bi-bell-slash fs-4 d-block mb-1"></i>No notifications yet
+          </li>
+        </ul>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- ── Dark mode toggle ───────────────────────────────────────────── -->
+    <button id="darkToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <i class="bi bi-moon-fill" id="darkIcon"></i>
+    </button>
+  </div>
+</header>
+
+<!-- ── Toast container ───────────────────────────────────────────────────── -->
+<div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+<% if (typeof flash !== 'undefined') { %>
+  <% if (flash.success) { %>
+    <script>window.__flashToast = { type: 'success', msg: '<%- flash.success.replace(/'/g, "\'") %>' };</script>
+  <% } else if (flash.error) { %>
+    <script>window.__flashToast = { type: 'danger',  msg: '<%- flash.error.replace(/'/g, "\'") %>' };</script>
+  <% } %>
+<% } %>

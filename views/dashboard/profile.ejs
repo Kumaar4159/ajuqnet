@@ -1,0 +1,22 @@
+<%- include('../partials/layout_start') %>
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="profile-avatar mb-3"><%= profileUser.name.charAt(0).toUpperCase() %></div>
+        <h4 class="fw-bold"><%= profileUser.name %></h4>
+        <div class="mb-3"><%- include('../partials/status_badge', { status: profileUser.role }) %></div>
+        <table class="table table-sm text-start mt-3">
+          <tbody>
+            <tr><th class="text-muted fw-normal" width="130">Email</th><td><%= profileUser.email %></td></tr>
+            <tr><th class="text-muted fw-normal">Department</th><td><%= profileUser.department || '—' %></td></tr>
+            <% if (profileUser.studentId) { %><tr><th class="text-muted fw-normal">Student ID</th><td><%= profileUser.studentId %></td></tr><% } %>
+            <tr><th class="text-muted fw-normal">Joined</th><td><%= new Date(profileUser.createdAt).toDateString() %></td></tr>
+            <tr><th class="text-muted fw-normal">Last Login</th><td><%= profileUser.lastLogin ? new Date(profileUser.lastLogin).toLocaleString() : 'N/A' %></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/layout_end') %>

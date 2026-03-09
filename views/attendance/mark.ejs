@@ -1,0 +1,289 @@
+<%- include('../partials/layout_start') %>
+
+<% if (success) { %>
+<div class="alert alert-success alert-dismissible fade show py-2 small mb-3" role="alert">
+  <i class="bi bi-check-circle-fill me-1"></i><%= success %>
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<% } %>
+<% if (error) { %>
+<div class="alert alert-danger alert-dismissible fade show py-2 small mb-3" role="alert">
+  <i class="bi bi-exclamation-triangle-fill me-1"></i><%= error %>
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<% } %>
+
+<div class="row g-3">
+  <!-- ── Mark form ───────────────────────────────────────────────────────── -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-person-check-fill text-primary"></i> Mark Attendance
+      </div>
+      <div class="card-body">
+
+        <!-- Dept / Semester / Subject filter row -->
+        <form method="GET" action="/attendance/mark" class="row g-2 mb-3 align-items-end pb-3 border-bottom">
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Department</label>
+            <select name="department" id="deptFilter" class="form-select form-select-sm">
+              <option value="">All Departments</option>
+              <% departments.forEach(d => { %><option value="<%= d %>" <%= filterDept===d?'selected':'' %>><%= d %></option><% }) %>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Semester</label>
+            <select name="semester" class="form-select form-select-sm">
+              <option value="">All Semesters</option>
+              <% semesters.forEach(s => { %><option value="<%= s %>" <%= filterSem===s?'selected':'' %>>Sem <%= s %></option><% }) %>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+          </div>
+          <div class="col-md-3">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              <%= students.length %> student(s) shown
+            </span>
+          </div>
+        </form>
+
+        <!-- Subject + Date row -->
+        <div class="row g-2 mb-3">
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Subject <span class="text-danger">*</span></label>
+            <select id="subjectInput" class="form-select form-select-sm">
+              <option value="">— Select dept & sem to load subjects —</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Department (for record)</label>
+            <input type="text" id="deptInput" class="form-control form-control-sm"
+                   value="<%= filterDept %>" placeholder="Auto-filled from filter">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Date <span class="text-danger">*</span></label>
+            <input type="date" id="dateInput" class="form-control form-control-sm"
+                   value="<%= today %>" max="<%= today %>">
+          </div>
+        </div>
+
+        <!-- Quick filter -->
+        <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+          <span class="small fw-semibold text-muted">Quick set all:</span>
+          <button type="button" class="btn btn-sm btn-outline-success" id="setAllPresent">
+            <i class="bi bi-check-circle me-1"></i>All Present
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-danger" id="setAllAbsent">
+            <i class="bi bi-x-circle me-1"></i>All Absent
+          </button>
+          <div class="ms-auto">
+            <input type="text" id="searchStudent" class="form-control form-control-sm"
+                   placeholder="🔍 Filter students…" style="width:170px">
+          </div>
+        </div>
+
+        <!-- Student list -->
+        <div class="table-responsive" style="max-height:420px;overflow-y:auto">
+          <table class="table table-hover table-sm align-middle mb-0" id="studentTable">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th>Student</th>
+                <th class="text-center" style="width:110px">Status</th>
+                <th style="width:160px">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% students.forEach(function(s, i) { %>
+              <tr class="student-row">
+                <td>
+                  <div class="fw-semibold small"><%= s.name %></div>
+                  <div class="text-muted" style="font-size:.72rem">
+                    <% if (s.studentId) { %><span class="badge bg-secondary-subtle text-secondary me-1"><%= s.studentId %></span><% } %>
+                    <% if (s.semester) { %><span class="badge bg-info-subtle text-info border border-info-subtle me-1">Sem <%= s.semester %></span><% } %>
+                    <span class="text-muted"><%= s.department ? s.department.split(" ")[0] : "" %></span>
+                  </div>
+                  <input type="hidden" name="records[<%= i %>][studentId]"   value="<%= s._id %>">
+                  <input type="hidden" name="records[<%= i %>][studentName]" value="<%= s.name %>">
+                </td>
+                <td class="text-center">
+                  <select name="records[<%= i %>][status]" class="form-select form-select-sm status-select">
+                    <option value="present">✅ Present</option>
+                    <option value="absent">❌ Absent</option>
+                    <option value="late">🕐 Late</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="text" name="records[<%= i %>][note]"
+                         class="form-control form-control-sm" placeholder="Note…" maxlength="100">
+                </td>
+              </tr>
+              <% }) %>
+              <% if (!students.length) { %>
+              <tr><td colspan="3" class="text-center text-muted py-4">No active students found.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-3 d-flex gap-2 align-items-center">
+          <button type="button" class="btn btn-primary" id="saveAttendanceBtn">
+            <i class="bi bi-save me-1"></i>Save Attendance
+          </button>
+          <span class="small text-muted" id="countLabel"><%= students.length %> student(s)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Recent records ─────────────────────────────────────────────────── -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-clock-history text-muted"></i> Recent (7 days)
+      </div>
+      <div class="card-body p-0" style="max-height:520px;overflow-y:auto">
+        <% if (recent.length) { %>
+        <% var lastDate = ''; %>
+        <% recent.forEach(function(r) { %>
+        <%   var d = new Date(r.date).toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'}); %>
+        <%   if (d !== lastDate) { lastDate = d; %>
+        <div class="px-3 py-1 bg-body-secondary border-bottom">
+          <span class="small fw-semibold text-muted"><%= d %></span>
+        </div>
+        <%   } %>
+        <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom">
+          <% var sc = {present:'success',absent:'danger',late:'warning'}[r.status]; %>
+          <span class="badge bg-<%= sc %>-subtle text-<%= sc %> border border-<%= sc %>-subtle"
+                style="font-size:.65rem;width:52px;text-align:center">
+            <%= r.status %>
+          </span>
+          <div class="overflow-hidden">
+            <div class="small fw-semibold text-truncate"><%= r.student ? r.student.name : r.studentName %></div>
+            <div class="text-muted" style="font-size:.7rem"><%= r.subject %></div>
+          </div>
+        </div>
+        <% }) %>
+        <% } else { %>
+        <div class="text-center text-muted py-5 small">
+          <i class="bi bi-calendar-x fs-2 d-block mb-2 opacity-25"></i>
+          No recent records
+        </div>
+        <% } %>
+      </div>
+      <div class="card-footer bg-transparent border-0">
+        <a href="/attendance/report" class="btn btn-outline-secondary btn-sm w-100">
+          <i class="bi bi-file-earmark-bar-graph me-1"></i>View Full Report
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setAll(val) {
+  document.querySelectorAll('.status-select').forEach(function(s) { s.value = val; });
+}
+
+document.getElementById('searchStudent').addEventListener('input', function () {
+  var q = this.value.toLowerCase();
+  document.querySelectorAll('.student-row').forEach(function (row) {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+  var visible = document.querySelectorAll('.student-row:not([style*="none"])').length;
+  document.getElementById('countLabel').textContent = visible + ' student(s)';
+});
+
+document.getElementById('setAllPresent').addEventListener('click', function() { setAll('present'); });
+document.getElementById('setAllAbsent').addEventListener('click', function() { setAll('absent'); });
+document.getElementById('saveAttendanceBtn').addEventListener('click', function() { submitAttendance(); });
+
+function submitAttendance() {
+  var subjectEl = document.getElementById('subjectInput');
+  var subject = subjectEl.tagName === 'SELECT' ? subjectEl.value : subjectEl.value.trim();
+  var dept    = document.getElementById('deptInput').value.trim();
+  var date    = document.getElementById('dateInput').value;
+  if (!subject) { alert('Please enter a subject.'); return; }
+  if (!date)    { alert('Please select a date.'); return; }
+
+  var rows = document.querySelectorAll('.student-row');
+  var records = [];
+  rows.forEach(function (row) {
+    if (row.style.display === 'none') return;
+    var ids  = row.querySelector('[name*="[studentId]"]');
+    var nm   = row.querySelector('[name*="[studentName]"]');
+    var stat = row.querySelector('.status-select');
+    var note = row.querySelector('[name*="[note]"]');
+    if (ids) records.push({
+      studentId:   ids.value,
+      studentName: nm   ? nm.value   : '',
+      status:      stat ? stat.value : 'present',
+      note:        note ? note.value : '',
+    });
+  });
+
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/attendance/mark';
+  var append = function(n, v) {
+    var i = document.createElement('input');
+    i.type = 'hidden'; i.name = n; i.value = v;
+    form.appendChild(i);
+  };
+  append('subject',    subject);
+  append('department', dept);
+  append('date',       date);
+  records.forEach(function(r, i) {
+    append('records['+i+'][studentId]',   r.studentId);
+    append('records['+i+'][studentName]', r.studentName);
+    append('records['+i+'][status]',      r.status);
+    append('records['+i+'][note]',        r.note);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+// ── Auto-load subjects when dept/sem filter changes ──────────────────
+function loadSubjects(dept, sem) {
+  const subjSel = document.getElementById('subjectInput');
+  if (!subjSel || subjSel.tagName !== 'SELECT') return;
+  if (!dept || !sem) {
+    subjSel.innerHTML = '<option value="">— Select dept & sem to load subjects —</option>';
+    return;
+  }
+  subjSel.innerHTML = '<option value="">Loading…</option>';
+  fetch('/subjects/api/my-subjects?' + new URLSearchParams({ department: dept, semester: sem }))
+    .then(r => r.json())
+    .then(data => {
+      if (data.subjects && data.subjects.length) {
+        subjSel.innerHTML = '<option value="">Select subject…</option>' +
+          data.subjects.map(s => '<option value="' + s.name + '">['+ s.code +'] '+ s.name +'</option>').join('');
+      } else {
+        subjSel.innerHTML = '<option value="">No subjects assigned for this selection</option>';
+      }
+    })
+    .catch(() => { subjSel.innerHTML = '<option value="">Error loading subjects</option>'; });
+}
+
+// Auto-load on page load if filters already set
+(function() {
+  const dept = '<%= filterDept %>';
+  const sem  = '<%= filterSem %>';
+  if (dept && sem) loadSubjects(dept, sem);
+})();
+
+// Auto-load when dropdowns change (no need to click Filter)
+document.getElementById('deptFilter').addEventListener('change', function() {
+  const sem = document.querySelector('select[name="semester"]').value;
+  loadSubjects(this.value, sem);
+  // Also auto-submit filter to reload student list
+  this.closest('form').submit();
+});
+document.querySelector('select[name="semester"]').addEventListener('change', function() {
+  const dept = document.getElementById('deptFilter').value;
+  loadSubjects(dept, this.value);
+  // Also auto-submit filter to reload student list
+  this.closest('form').submit();
+});
+</script>
+
+<%- include('../partials/layout_end') %>

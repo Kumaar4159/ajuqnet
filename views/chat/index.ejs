@@ -1,0 +1,131 @@
+<%- include('../partials/layout_start') %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="text-muted small"><%= rooms.length %> accessible rooms</span>
+  <% if (user && (user.role==='admin'||user.role==='faculty')) { %>
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newRoomModal">
+    <i class="bi bi-plus-lg me-1"></i>New Room
+  </button>
+  <% } %>
+</div>
+
+<% if (!rooms.length) { %>
+<div class="text-center py-5 text-muted"><i class="bi bi-chat fs-1"></i><br>No rooms available.</div>
+<% } else { %>
+<div class="row g-3">
+  <% rooms.forEach(room => { %>
+  <div class="col-sm-6 col-lg-4">
+    <a href="/chat/room/<%= room._id %>" class="card border-0 shadow-sm text-decoration-none text-dark hover-lift h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-1">
+          <h6 class="fw-bold mb-0">
+            <% if (room.type==='direct') { %><i class="bi bi-person-lines-fill text-info me-1"></i><% } else if (room.type==='private') { %><i class="bi bi-lock-fill text-warning me-1"></i><% } else { %><i class="bi bi-hash text-primary me-1"></i><% } %>
+            <%= room.name %>
+          </h6>
+          <span class="badge bg-<%= room.type==='public'?'primary':room.type==='private'?'warning text-dark':'info' %>"><%= room.type %></span>
+        </div>
+        <p class="text-muted small mb-2"><%= room.description?.substring(0,80)||'' %></p>
+        <div class="d-flex justify-content-between align-items-center">
+          <small class="text-muted">
+            <% room.allowedRoles.forEach(r => { %><span class="badge bg-light text-dark border me-1"><%= r %></span><% }) %>
+          </small>
+          <% if (room.lastMessageAt) { %><small class="text-muted"><%= new Date(room.lastMessageAt).toLocaleDateString() %></small><% } %>
+        </div>
+      </div>
+    </a>
+  </div>
+  <% }) %>
+</div>
+<% } %>
+
+<!-- DM section -->
+<div class="card border-0 shadow-sm mt-4">
+  <div class="card-header bg-transparent border-0 fw-semibold"><i class="bi bi-person-lines-fill me-2"></i>Direct Messages</div>
+  <div class="card-body">
+    <form action="/chat/direct" method="POST" class="d-flex gap-2">
+      <input type="text" id="dmSearchInput" class="form-control" placeholder="Search user by name or email…" autocomplete="off">
+      <input type="hidden" name="targetUserId" id="dmTargetId">
+      <button type="submit" class="btn btn-primary" id="dmBtn" disabled><i class="bi bi-send me-1"></i>Message</button>
+    </form>
+    <div id="dmResults" class="mt-2 list-group" style="max-height:200px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- New Room Modal (admin/faculty only) -->
+<% if (user && (user.role==='admin'||user.role==='faculty')) { %>
+<div class="modal fade" id="newRoomModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <form action="/chat/rooms" method="POST">
+        <div class="modal-header border-0"><h5 class="modal-title fw-bold">New Chat Room</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Room Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Study Group A" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Description</label>
+            <input type="text" name="description" class="form-control" placeholder="What is this room for?">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Type</label>
+            <select name="type" class="form-select">
+              <option value="public">Public (everyone with role can join)</option>
+              <option value="private">Private (invite only)</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Who can access?</label>
+            <div class="d-flex gap-3">
+              <% ['admin','faculty','student'].forEach(r => { %>
+              <div class="form-check">
+                <input type="checkbox" name="allowedRoles" class="form-check-input" id="role_<%= r %>" value="<%= r %>" checked>
+                <label class="form-check-label" for="role_<%= r %>"><%= r %></label>
+              </div>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Room</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<script>
+let dmTimeout;
+const searchInput = document.getElementById('dmSearchInput');
+const dmResults   = document.getElementById('dmResults');
+const dmTargetId  = document.getElementById('dmTargetId');
+const dmBtn       = document.getElementById('dmBtn');
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(dmTimeout);
+  const q = searchInput.value.trim();
+  if (!q) { dmResults.innerHTML=''; return; }
+  dmTimeout = setTimeout(async () => {
+    const res  = await fetch(`/chat/api/users/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    dmResults.innerHTML = data.users.map(u =>
+      `<button type="button" class="list-group-item list-group-item-action small" data-id="${u._id}" data-name="${u.name.replace(/"/g,'&quot;')}">
+        <strong>${u.name}</strong> <span class="badge bg-secondary">${u.role}</span> <span class="text-muted">${u.email}</span>
+      </button>`
+    ).join('');
+  }, 300);
+});
+
+dmResults.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-id]');
+  if (!btn) return;
+  dmTargetId.value  = btn.dataset.id;
+  searchInput.value = btn.dataset.name;
+  dmResults.innerHTML = '';
+  dmBtn.disabled = false;
+});
+
+</script>
+<%- include('../partials/layout_end') %>

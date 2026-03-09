@@ -1,0 +1,445 @@
+<%- include('../partials/layout_start') %>
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <div class="stat-icon bg-info-subtle text-info rounded-3 fs-4">
+    <i class="bi bi-camera-video"></i>
+  </div>
+  <div>
+    <h5 class="mb-0 fw-bold">Mark Your Attendance</h5>
+    <div class="text-muted small">Scan QR → Face check → Location check → Done</div>
+  </div>
+</div>
+
+<% if (flash.error) { %>
+<div class="alert alert-danger alert-dismissible fade show">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i><%= flash.error %>
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<% } %>
+
+<div class="row g-4 justify-content-center">
+  <div class="col-lg-6">
+
+    <!-- Step indicator -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="text-center flex-fill" id="step1Indicator">
+            <div class="badge bg-primary rounded-circle mb-1 d-flex align-items-center justify-content-center mx-auto" style="width:32px;height:32px">1</div>
+            <div style="font-size:.7rem" class="text-muted">Scan QR</div>
+          </div>
+          <div class="flex-fill border-top border-2 mb-3"></div>
+          <div class="text-center flex-fill" id="step2Indicator">
+            <div class="badge bg-secondary rounded-circle mb-1 d-flex align-items-center justify-content-center mx-auto" style="width:32px;height:32px">2</div>
+            <div style="font-size:.7rem" class="text-muted">Face Check</div>
+          </div>
+          <div class="flex-fill border-top border-2 mb-3"></div>
+          <div class="text-center flex-fill" id="step3Indicator">
+            <div class="badge bg-secondary rounded-circle mb-1 d-flex align-items-center justify-content-center mx-auto" style="width:32px;height:32px">3</div>
+            <div style="font-size:.7rem" class="text-muted">Location</div>
+          </div>
+          <div class="flex-fill border-top border-2 mb-3"></div>
+          <div class="text-center flex-fill" id="step4Indicator">
+            <div class="badge bg-secondary rounded-circle mb-1 d-flex align-items-center justify-content-center mx-auto" style="width:32px;height:32px">4</div>
+            <div style="font-size:.7rem" class="text-muted">Submit</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 1: Enter QR token (camera scanning in browser is limited — direct token entry) -->
+    <div class="card border-0 shadow-sm mb-3" id="step1Card">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-qr-code me-1 text-primary"></i> Step 1 — QR Code
+      </div>
+      <div class="card-body">
+        <p class="text-muted small">Your teacher will share the QR code. Scan it with your phone camera or enter the session details below.</p>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Session Token <span class="text-danger">*</span></label>
+          <input type="text" id="qrTokenInput" class="form-control font-monospace"
+                 placeholder="Paste token from QR scan"
+                 value="<%= prefillToken %>" autocomplete="off">
+          <div class="form-text">Scan the QR with any QR reader app and paste the "token" value here.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Session ID <span class="text-danger">*</span></label>
+          <input type="text" id="sessionIdInput" class="form-control font-monospace"
+                 placeholder="Paste session ID from QR"
+                 value="<%= prefillSession %>" autocomplete="off">
+        </div>
+        <button class="btn btn-primary w-100" id="validateQrBtn">
+          <i class="bi bi-arrow-right-circle me-1"></i>Validate QR & Continue
+        </button>
+        <div id="qrError" class="alert alert-danger mt-2 d-none"></div>
+      </div>
+    </div>
+
+    <!-- Step 2: Face recognition -->
+    <div class="card border-0 shadow-sm mb-3 d-none" id="step2Card">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-person-bounding-box me-1 text-info"></i> Step 2 — Face Verification
+      </div>
+      <div class="card-body text-center">
+        <p class="text-muted small mb-3">Allow camera access. Look directly at the camera. Keep your face well-lit.</p>
+
+        <div class="position-relative d-inline-block mb-3">
+          <video id="faceVideo" autoplay muted playsinline
+                 class="rounded-3 border" style="width:260px;height:195px;object-fit:cover;background:#000"></video>
+          <canvas id="faceCanvas" class="d-none"></canvas>
+          <div id="faceOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center rounded-3"
+               style="pointer-events:none">
+            <!-- Oval guide -->
+            <svg width="130" height="170" viewBox="0 0 130 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="65" cy="85" rx="60" ry="80" stroke="rgba(59,130,246,.7)" stroke-width="3" stroke-dasharray="8 4" fill="none"/>
+            </svg>
+          </div>
+        </div>
+
+        <div id="faceStatus" class="text-muted small mb-3">Loading face recognition models…</div>
+        <div class="progress mb-3 d-none" id="faceProgress" style="height:6px">
+          <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" style="width:100%"></div>
+        </div>
+
+        <button class="btn btn-info text-white w-100" id="captureFaceBtn" disabled>
+          <i class="bi bi-camera me-1"></i>Capture &amp; Verify Face
+        </button>
+        <div id="faceResult" class="mt-2 d-none"></div>
+
+        <div class="alert alert-warning mt-3 text-start" style="font-size:.8rem">
+          <i class="bi bi-info-circle-fill me-1"></i>
+          <strong>First time?</strong> If you haven't set up your face profile yet,
+          <a href="/dashboard/profile#face-setup">go to Profile → Face Setup</a> first.
+          Without a stored profile, face verification will be skipped and your attendance may be rejected.
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Location -->
+    <div class="card border-0 shadow-sm mb-3 d-none" id="step3Card">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-geo-alt-fill me-1 text-danger"></i> Step 3 — Location Verification
+      </div>
+      <div class="card-body text-center">
+        <p class="text-muted small mb-3">Allow location access so the system can confirm you're in the classroom.</p>
+        <div class="fs-1 mb-2" id="locationIcon">📍</div>
+        <div id="locationStatus" class="text-muted small mb-3">Ready to check your location.</div>
+        <button class="btn btn-danger text-white w-100" id="captureLocationBtn">
+          <i class="bi bi-crosshair me-1"></i>Get My Location
+        </button>
+        <div id="locationResult" class="mt-2 d-none"></div>
+      </div>
+    </div>
+
+    <!-- Step 4: Submit -->
+    <div class="card border-0 shadow-sm d-none" id="step4Card">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-send-check me-1 text-success"></i> Step 4 — Submit Attendance
+      </div>
+      <div class="card-body">
+        <div id="verificationSummary" class="mb-3"></div>
+        <button class="btn btn-success w-100 btn-lg" id="submitAttendanceBtn">
+          <i class="bi bi-check2-circle me-2"></i>Mark My Attendance
+        </button>
+        <div id="submitResult" class="mt-3 d-none"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- face-api.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+
+<script>
+(function () {
+  // ── State ──────────────────────────────────────────────────────────────────
+  let sessionId    = '';
+  let qrToken      = '';
+  let teacherLat   = null;
+  let teacherLng   = null;
+  let faceVerified = false;
+  let faceScore    = 0;
+  let studentLat   = null;
+  let studentLng   = null;
+  let videoStream  = null;
+  let faceModelsLoaded = false;
+
+  // ── Step indicators ────────────────────────────────────────────────────────
+  function activateStep(n) {
+    [1,2,3,4].forEach(i => {
+      const badge = document.querySelector('#step' + i + 'Indicator .badge');
+      badge.className = i <= n
+        ? 'badge bg-primary rounded-circle mb-1 d-flex align-items-center justify-content-center mx-auto'
+        : 'badge bg-secondary rounded-circle mb-1 d-flex align-items-center justify-content-center mx-auto';
+      badge.style.width = '32px';
+      badge.style.height = '32px';
+    });
+  }
+
+  // ── STEP 1: Validate QR ────────────────────────────────────────────────────
+  document.getElementById('validateQrBtn').addEventListener('click', function () {
+    const token = document.getElementById('qrTokenInput').value.trim();
+    const sid   = document.getElementById('sessionIdInput').value.trim();
+    const errEl = document.getElementById('qrError');
+    errEl.classList.add('d-none');
+
+    if (!token || !sid) {
+      errEl.textContent = 'Please enter both the Session ID and Token from the QR code.';
+      errEl.classList.remove('d-none');
+      return;
+    }
+
+    // Fetch session status to validate
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Validating…';
+
+    fetch('/smart-attendance/api/session-status/' + sid)
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok || d.status !== 'active' || d.isExpired) {
+          errEl.textContent = d.isExpired ? 'This QR code has expired.' : 'Session not found or already closed.';
+          errEl.classList.remove('d-none');
+          this.disabled = false;
+          this.innerHTML = '<i class="bi bi-arrow-right-circle me-1"></i>Validate QR & Continue';
+          return;
+        }
+        sessionId  = sid;
+        qrToken    = token;
+        document.getElementById('step1Card').classList.add('d-none');
+        document.getElementById('step2Card').classList.remove('d-none');
+        activateStep(2);
+        initFaceRecognition();
+      })
+      .catch(() => {
+        errEl.textContent = 'Could not reach server. Check connection.';
+        errEl.classList.remove('d-none');
+        this.disabled = false;
+        this.innerHTML = '<i class="bi bi-arrow-right-circle me-1"></i>Validate QR & Continue';
+      });
+  });
+
+  // ── STEP 2: Face recognition ───────────────────────────────────────────────
+  async function initFaceRecognition() {
+    const statusEl = document.getElementById('faceStatus');
+    const progressEl = document.getElementById('faceProgress');
+    progressEl.classList.remove('d-none');
+
+    try {
+      statusEl.textContent = 'Loading face recognition models (first time may take ~10s)…';
+      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+      ]);
+      faceModelsLoaded = true;
+      statusEl.textContent = 'Models loaded. Starting camera…';
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      videoStream = stream;
+      const video = document.getElementById('faceVideo');
+      video.srcObject = stream;
+      await video.play();
+
+      statusEl.innerHTML = '<span class="text-success"><i class="bi bi-camera-fill me-1"></i>Camera ready. Centre your face in the oval and click Capture.</span>';
+      document.getElementById('captureFaceBtn').disabled = false;
+      progressEl.classList.add('d-none');
+    } catch (err) {
+      statusEl.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Camera/models unavailable: ' + err.message + '. Face check will be skipped.</span>';
+      progressEl.classList.add('d-none');
+      document.getElementById('captureFaceBtn').disabled = false;
+      document.getElementById('captureFaceBtn').textContent = 'Skip Face Check & Continue';
+      document.getElementById('captureFaceBtn').className = 'btn btn-warning w-100';
+    }
+  }
+
+  document.getElementById('captureFaceBtn').addEventListener('click', async function () {
+    if (!faceModelsLoaded) {
+      // Skip face check
+      faceVerified = false;
+      faceScore    = 0;
+      proceedToLocation();
+      return;
+    }
+
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Analysing…';
+    const resultEl = document.getElementById('faceResult');
+    resultEl.classList.remove('d-none');
+
+    try {
+      const video  = document.getElementById('faceVideo');
+      const canvas = document.getElementById('faceCanvas');
+      canvas.width  = video.videoWidth  || 260;
+      canvas.height = video.videoHeight || 195;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+
+      // Detect face + get descriptor
+      const detection = await faceapi
+        .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+
+      if (!detection) {
+        resultEl.innerHTML = '<div class="alert alert-warning mb-0"><i class="bi bi-exclamation-triangle me-1"></i>No face detected. Look directly at camera and try again.</div>';
+        this.disabled = false;
+        this.innerHTML = '<i class="bi bi-camera me-1"></i>Capture & Verify Face';
+        return;
+      }
+
+      // Fetch stored embedding from profile API
+      const profileRes = await fetch('/dashboard/profile/face-embedding');
+      if (!profileRes.ok) {
+        // No stored profile — skip with warning
+        resultEl.innerHTML = '<div class="alert alert-warning mb-0"><i class="bi bi-exclamation-triangle me-1"></i>No face profile found. Face check skipped. <a href="/dashboard/profile#face-setup">Set up now</a>.</div>';
+        faceVerified = false; faceScore = 0;
+        stopCamera();
+        setTimeout(proceedToLocation, 1500);
+        return;
+      }
+
+      const profileData = await profileRes.json();
+      if (!profileData.embedding || !profileData.embedding.length) {
+        resultEl.innerHTML = '<div class="alert alert-warning mb-0">No face embedding stored. Face check skipped.</div>';
+        faceVerified = false; faceScore = 0;
+        stopCamera();
+        setTimeout(proceedToLocation, 1500);
+        return;
+      }
+
+      // Compare descriptors
+      const stored  = new Float32Array(profileData.embedding);
+      const captured = detection.descriptor;
+      const distance = faceapi.euclideanDistance(stored, captured);
+      const score    = Math.max(0, 1 - distance); // higher = better match
+      faceScore      = parseFloat(score.toFixed(4));
+
+      const THRESHOLD = 0.45; // euclidean distance < 0.45 is a match
+      faceVerified = distance < THRESHOLD;
+
+      if (faceVerified) {
+        resultEl.innerHTML = '<div class="alert alert-success mb-0"><i class="bi bi-check-circle-fill me-1"></i>Face matched! Confidence: ' + Math.round(score * 100) + '%</div>';
+      } else {
+        resultEl.innerHTML = '<div class="alert alert-danger mb-0"><i class="bi bi-x-circle-fill me-1"></i>Face not recognised (distance: ' + distance.toFixed(2) + '). Attendance will be rejected.</div>';
+      }
+      stopCamera();
+      setTimeout(proceedToLocation, 2000);
+
+    } catch (err) {
+      resultEl.innerHTML = '<div class="alert alert-danger mb-0">Error: ' + err.message + '</div>';
+      this.disabled = false;
+      this.innerHTML = '<i class="bi bi-camera me-1"></i>Capture & Verify Face';
+    }
+  });
+
+  function stopCamera() {
+    if (videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; }
+  }
+
+  function proceedToLocation() {
+    document.getElementById('step2Card').classList.add('d-none');
+    document.getElementById('step3Card').classList.remove('d-none');
+    activateStep(3);
+  }
+
+  // ── STEP 3: Location ───────────────────────────────────────────────────────
+  document.getElementById('captureLocationBtn').addEventListener('click', function () {
+    const statusEl  = document.getElementById('locationStatus');
+    const resultEl  = document.getElementById('locationResult');
+    const iconEl    = document.getElementById('locationIcon');
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Getting location…';
+    statusEl.textContent = 'Requesting GPS signal…';
+
+    if (!navigator.geolocation) {
+      statusEl.textContent = 'Geolocation not supported. Location check skipped.';
+      proceedToSubmit();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        studentLat = pos.coords.latitude;
+        studentLng = pos.coords.longitude;
+        iconEl.textContent = '✅';
+        resultEl.innerHTML = '<div class="alert alert-success mb-0"><i class="bi bi-geo-alt-fill me-1"></i>Location captured: ' + studentLat.toFixed(5) + ', ' + studentLng.toFixed(5) + '</div>';
+        resultEl.classList.remove('d-none');
+        statusEl.textContent = 'Location captured successfully.';
+        setTimeout(proceedToSubmit, 1500);
+      },
+      function (err) {
+        iconEl.textContent = '⚠️';
+        statusEl.textContent = 'Could not get location: ' + err.message + '. Location check may fail.';
+        resultEl.innerHTML = '<div class="alert alert-warning mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Location unavailable. Proceeding without GPS.</div>';
+        resultEl.classList.remove('d-none');
+        setTimeout(proceedToSubmit, 1500);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+
+  function proceedToSubmit() {
+    document.getElementById('step3Card').classList.add('d-none');
+    document.getElementById('step4Card').classList.remove('d-none');
+    activateStep(4);
+
+    const summary = document.getElementById('verificationSummary');
+    summary.innerHTML = `
+      <div class="list-group">
+        <div class="list-group-item border-0 d-flex align-items-center gap-2 py-2">
+          ${faceVerified
+            ? '<i class="bi bi-check-circle-fill text-success fs-5"></i><span>Face <strong>recognised</strong></span>'
+            : '<i class="bi bi-x-circle-fill text-danger fs-5"></i><span>Face <strong>not recognised</strong></span>'}
+        </div>
+        <div class="list-group-item border-0 d-flex align-items-center gap-2 py-2">
+          ${studentLat
+            ? '<i class="bi bi-check-circle-fill text-success fs-5"></i><span>Location <strong>captured</strong></span>'
+            : '<i class="bi bi-exclamation-circle-fill text-warning fs-5"></i><span>Location <strong>not available</strong></span>'}
+        </div>
+      </div>
+    `;
+  }
+
+  // ── STEP 4: Submit ─────────────────────────────────────────────────────────
+  document.getElementById('submitAttendanceBtn').addEventListener('click', async function () {
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting…';
+    const resultEl = document.getElementById('submitResult');
+    resultEl.classList.remove('d-none');
+
+    try {
+      const body = new URLSearchParams({
+        sessionId,
+        qrToken,
+        studentLat:   studentLat   || '',
+        studentLng:   studentLng   || '',
+        faceVerified: String(faceVerified),
+        faceScore:    String(faceScore),
+      });
+
+      const r = await fetch('/smart-attendance/submit', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body:    body.toString(),
+      });
+      const d = await r.json();
+
+      if (d.ok) {
+        resultEl.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i>' + d.message + '</div>';
+        this.className = 'btn btn-success w-100 btn-lg disabled';
+        this.innerHTML = '<i class="bi bi-check2 me-1"></i>Attendance Recorded';
+      } else {
+        resultEl.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle-fill me-2"></i>' + d.error + '</div>';
+        this.disabled = false;
+        this.innerHTML = '<i class="bi bi-check2-circle me-2"></i>Mark My Attendance';
+      }
+    } catch (err) {
+      resultEl.innerHTML = '<div class="alert alert-danger">Network error. Please try again.</div>';
+      this.disabled = false;
+      this.innerHTML = '<i class="bi bi-check2-circle me-2"></i>Mark My Attendance';
+    }
+  });
+}());
+</script>
+
+<%- include('../partials/layout_end') %>

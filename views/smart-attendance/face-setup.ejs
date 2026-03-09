@@ -1,0 +1,252 @@
+<%- include('../partials/layout_start') %>
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <div class="stat-icon bg-info-subtle text-info rounded-3 fs-4">
+    <i class="bi bi-person-bounding-box"></i>
+  </div>
+  <div>
+    <h5 class="mb-0 fw-bold">Face Profile Setup</h5>
+    <div class="text-muted small">Register your face for smart attendance verification</div>
+  </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+  <div class="col-lg-6">
+
+    <!-- Status card -->
+    <div class="card border-0 shadow-sm mb-3" id="faceStatusCard">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div id="faceProfileIcon" class="stat-icon bg-secondary-subtle text-secondary rounded-3 fs-4">
+          <i class="bi bi-person-x"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold" id="faceProfileTitle">Checking…</div>
+          <div class="text-muted small" id="faceProfileDesc">Loading your face profile status.</div>
+        </div>
+        <button class="btn btn-outline-danger btn-sm d-none" id="deleteFaceBtn">
+          <i class="bi bi-trash me-1"></i>Remove
+        </button>
+      </div>
+    </div>
+
+    <!-- Camera card -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-camera-video text-info me-1"></i> Register Your Face
+      </div>
+      <div class="card-body text-center">
+        <p class="text-muted small mb-3">
+          Sit in good lighting. Look straight at the camera. Keep your face centred in the oval.
+          We'll capture multiple angles and average them for accuracy.
+        </p>
+
+        <div class="position-relative d-inline-block mb-3">
+          <video id="setupVideo" autoplay muted playsinline
+                 class="rounded-3 border" style="width:280px;height:210px;object-fit:cover;background:#000"></video>
+          <canvas id="setupCanvas" class="d-none"></canvas>
+          <!-- Face oval guide -->
+          <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+               style="pointer-events:none">
+            <svg width="140" height="185" viewBox="0 0 140 185" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="70" cy="92" rx="65" ry="87" stroke="rgba(6,182,212,.7)" stroke-width="3"
+                       stroke-dasharray="8 4" fill="none"/>
+            </svg>
+          </div>
+        </div>
+
+        <div id="setupStatus" class="text-muted small mb-3">Starting camera and loading models…</div>
+        <div class="progress mb-3 d-none" id="setupProgress" style="height:8px">
+          <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" id="setupProgressBar" style="width:0%"></div>
+        </div>
+
+        <!-- Capture count -->
+        <div class="d-flex justify-content-center gap-2 mb-3" id="captureIndicators">
+          <% for(let i=0; i<5; i++) { %>
+          <div class="rounded-circle border" id="captureCircle<%= i %>"
+               style="width:16px;height:16px;background:transparent;transition:background .3s"></div>
+          <% } %>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-center">
+          <button class="btn btn-info text-white" id="startCaptureBtn" disabled>
+            <i class="bi bi-camera me-1"></i>Start Capture (5 shots)
+          </button>
+        </div>
+
+        <div id="setupResult" class="mt-3 d-none"></div>
+      </div>
+    </div>
+
+    <!-- Tips -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-lightbulb text-warning me-1"></i> Tips for Best Results
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          <div class="list-group-item border-0 py-2 small"><i class="bi bi-sun text-warning me-2"></i>Use good, even lighting — avoid strong backlighting</div>
+          <div class="list-group-item border-0 py-2 small"><i class="bi bi-eye text-info me-2"></i>Look directly at the camera lens</div>
+          <div class="list-group-item border-0 py-2 small"><i class="bi bi-person text-primary me-2"></i>Keep your face fully visible — remove glasses if possible</div>
+          <div class="list-group-item border-0 py-2 small"><i class="bi bi-arrow-repeat text-success me-2"></i>Re-register if your appearance changes significantly</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+<script>
+(function () {
+  const MODEL_URL    = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+  const CAPTURE_N    = 5;
+  let descriptors    = [];
+  let stream         = null;
+  let captureRunning = false;
+
+  // ── Check existing profile ──────────────────────────────────────────────────
+  fetch('/dashboard/profile/face-embedding')
+    .then(r => r.json())
+    .then(d => {
+      if (d.embedding && d.embedding.length > 0) {
+        document.getElementById('faceProfileIcon').className = 'stat-icon bg-success-subtle text-success rounded-3 fs-4';
+        document.getElementById('faceProfileIcon').innerHTML = '<i class="bi bi-person-check"></i>';
+        document.getElementById('faceProfileTitle').textContent = 'Face profile registered ✓';
+        document.getElementById('faceProfileDesc').textContent  = 'Your face is set up for smart attendance. You can re-register below to update it.';
+        document.getElementById('deleteFaceBtn').classList.remove('d-none');
+      } else {
+        document.getElementById('faceProfileTitle').textContent = 'No face profile yet';
+        document.getElementById('faceProfileDesc').textContent  = 'Register your face below to use smart attendance.';
+      }
+    })
+    .catch(() => {
+      document.getElementById('faceProfileTitle').textContent = 'No face profile yet';
+    });
+
+  // ── Delete profile ──────────────────────────────────────────────────────────
+  document.getElementById('deleteFaceBtn').addEventListener('click', async function () {
+    if (!confirm('Remove your face profile? You will need to re-register to use smart attendance.')) return;
+    await fetch('/dashboard/profile/face-embedding', { method: 'DELETE' });
+    location.reload();
+  });
+
+  // ── Load models + start camera ───────────────────────────────────────────────
+  async function init() {
+    const statusEl   = document.getElementById('setupStatus');
+    const progressEl = document.getElementById('setupProgress');
+    const btn        = document.getElementById('startCaptureBtn');
+    progressEl.classList.remove('d-none');
+    document.getElementById('setupProgressBar').style.width = '20%';
+
+    try {
+      statusEl.textContent = 'Loading face recognition models…';
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+      ]);
+      document.getElementById('setupProgressBar').style.width = '60%';
+      statusEl.textContent = 'Starting camera…';
+
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
+      const video = document.getElementById('setupVideo');
+      video.srcObject = stream;
+      await video.play();
+
+      document.getElementById('setupProgressBar').style.width = '100%';
+      setTimeout(() => progressEl.classList.add('d-none'), 500);
+      statusEl.innerHTML = '<span class="text-success"><i class="bi bi-camera-fill me-1"></i>Camera ready. Centre your face and click Start Capture.</span>';
+      btn.disabled = false;
+    } catch (err) {
+      progressEl.classList.add('d-none');
+      statusEl.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error: ' + err.message + '</span>';
+    }
+  }
+
+  init();
+
+  // ── Capture 5 shots ───────────────────────────────────────────────────────────
+  document.getElementById('startCaptureBtn').addEventListener('click', async function () {
+    if (captureRunning) return;
+    captureRunning = true;
+    this.disabled  = true;
+    descriptors    = [];
+    const statusEl = document.getElementById('setupStatus');
+    const resultEl = document.getElementById('setupResult');
+    resultEl.classList.add('d-none');
+
+    // Reset circles
+    for (let i = 0; i < CAPTURE_N; i++) {
+      const c = document.getElementById('captureCircle' + i);
+      c.style.background = 'transparent';
+      c.style.borderColor = '';
+    }
+
+    for (let i = 0; i < CAPTURE_N; i++) {
+      statusEl.textContent = 'Capturing shot ' + (i + 1) + ' of ' + CAPTURE_N + '…';
+      await new Promise(r => setTimeout(r, 700)); // small pause between shots
+
+      const video  = document.getElementById('setupVideo');
+      const canvas = document.getElementById('setupCanvas');
+      canvas.width  = video.videoWidth  || 640;
+      canvas.height = video.videoHeight || 480;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+
+      const detection = await faceapi
+        .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+
+      const circle = document.getElementById('captureCircle' + i);
+      if (detection) {
+        descriptors.push(detection.descriptor);
+        circle.style.background   = '#22c55e';
+        circle.style.borderColor  = '#22c55e';
+      } else {
+        circle.style.background   = '#ef4444';
+        circle.style.borderColor  = '#ef4444';
+        statusEl.textContent = 'No face detected in shot ' + (i + 1) + '. Keep still and try again.';
+      }
+    }
+
+    if (descriptors.length < 3) {
+      statusEl.textContent = 'Only ' + descriptors.length + ' shots succeeded. Need at least 3. Try again.';
+      captureRunning = false;
+      this.disabled  = false;
+      return;
+    }
+
+    // Average the descriptors
+    statusEl.textContent = 'Processing ' + descriptors.length + ' captures…';
+    const avgDescriptor = new Float32Array(128);
+    descriptors.forEach(d => { for (let j = 0; j < 128; j++) avgDescriptor[j] += d[j]; });
+    for (let j = 0; j < 128; j++) avgDescriptor[j] /= descriptors.length;
+
+    // Save to server
+    try {
+      const r = await fetch('/dashboard/profile/face-embedding', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ embedding: Array.from(avgDescriptor) }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        statusEl.innerHTML = '<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Face profile saved successfully!</span>';
+        resultEl.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i>' + d.message + ' You can now mark attendance using QR scan.</div>';
+        resultEl.classList.remove('d-none');
+        document.getElementById('faceProfileIcon').className = 'stat-icon bg-success-subtle text-success rounded-3 fs-4';
+        document.getElementById('faceProfileIcon').innerHTML = '<i class="bi bi-person-check"></i>';
+        document.getElementById('faceProfileTitle').textContent = 'Face profile registered ✓';
+        document.getElementById('deleteFaceBtn').classList.remove('d-none');
+      } else {
+        throw new Error(d.error);
+      }
+    } catch (err) {
+      statusEl.innerHTML = '<span class="text-danger">Failed to save: ' + err.message + '</span>';
+    }
+    captureRunning = false;
+    this.disabled  = false;
+  });
+}());
+</script>
+
+<%- include('../partials/layout_end') %>

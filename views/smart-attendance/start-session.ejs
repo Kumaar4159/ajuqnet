@@ -1,0 +1,260 @@
+<%- include('../partials/layout_start') %>
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <div class="stat-icon bg-primary-subtle text-primary rounded-3 fs-4">
+    <i class="bi bi-qr-code"></i>
+  </div>
+  <div>
+    <h5 class="mb-0 fw-bold">Start Class Session</h5>
+    <div class="text-muted small">Generate a secure QR code for attendance</div>
+  </div>
+</div>
+
+<% if (flash.error) { %>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i><%= flash.error %>
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-pencil-square text-primary me-1"></i> Session Details
+      </div>
+      <div class="card-body">
+        <form id="sessionForm" action="/smart-attendance/start-session" method="POST">
+          <input type="hidden" name="teacherLat" id="teacherLat">
+          <input type="hidden" name="teacherLng" id="teacherLng">
+
+          <!-- Department + Semester (auto-load subjects) -->
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Department <span class="text-danger">*</span></label>
+              <select name="department" id="deptSelect" class="form-select" required>
+                <option value="">Select department…</option>
+                <option value="Computer Science">Computer Science (CS)</option>
+                <option value="Electrical &amp; Electronics">Electrical &amp; Electronics (EEE)</option>
+                <option value="Mechanical">Mechanical (MECH)</option>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Semester <span class="text-danger">*</span></label>
+              <select name="semester" id="semSelect" class="form-select" required>
+                <option value="">Select semester…</option>
+                <% for(let i=1; i<=6; i++) { %>
+                <option value="<%= i %>">Semester <%= i %></option>
+                <% } %>
+              </select>
+            </div>
+          </div>
+
+          <!-- Subject (auto-populated from API) -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
+            <div id="subjectWrapper">
+              <select name="subject" id="subjectSelect" class="form-select" required disabled>
+                <option value="">— Select dept &amp; semester first —</option>
+              </select>
+              <div id="subjectLoader" class="text-muted small mt-1 d-none">
+                <span class="spinner-border spinner-border-sm me-1"></span>Loading subjects…
+              </div>
+              <div id="subjectNote" class="text-warning small mt-1 d-none">
+                <i class="bi bi-exclamation-triangle me-1"></i>No subjects assigned to you for this selection.
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Room / Hall <span class="text-danger">*</span></label>
+              <input type="text" name="room" class="form-control" placeholder="e.g. LH-204" required maxlength="50">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Class Duration (minutes) <span class="text-danger">*</span></label>
+              <select name="duration" class="form-select" required>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60" selected>60 min</option>
+                <option value="90">90 min</option>
+                <option value="120">2 hours</option>
+                <option value="180">3 hours</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- GPS capture -->
+          <div class="card border bg-light mb-4" id="gpsCard">
+            <div class="card-body py-3">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-geo-alt-fill text-danger fs-5"></i>
+                <span class="fw-semibold">Your Classroom Location</span>
+                <span class="badge bg-warning text-dark ms-auto" id="gpsBadge">Not captured</span>
+              </div>
+              <p class="text-muted small mb-2">
+                Your GPS coordinates are embedded in the QR so students must be physically present.
+              </p>
+              <button type="button" class="btn btn-outline-primary btn-sm" id="captureGpsBtn">
+                <i class="bi bi-crosshair me-1"></i>Capture My Location
+              </button>
+              <div class="text-muted small mt-2" id="gpsStatus">Click the button above to get your location.</div>
+            </div>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+              <i class="bi bi-qr-code me-2"></i>Start Session &amp; Generate QR
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <!-- Dept Summary Card -->
+    <div class="card border-0 shadow-sm mb-3" id="deptInfoCard" style="display:none!important">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-bar-chart-fill text-info me-1"></i> Department Overview
+      </div>
+      <div class="card-body" id="deptInfoBody">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-shield-check text-success me-1"></i> How It Works
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          <div class="list-group-item border-0 d-flex gap-3 align-items-start py-3">
+            <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width:28px;height:28px;min-width:28px">1</div>
+            <div>
+              <div class="fw-semibold small">Select dept, semester &amp; subject</div>
+              <div class="text-muted" style="font-size:.8rem">Your assigned subjects load automatically.</div>
+            </div>
+          </div>
+          <div class="list-group-item border-0 d-flex gap-3 align-items-start py-3">
+            <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width:28px;height:28px;min-width:28px">2</div>
+            <div>
+              <div class="fw-semibold small">Capture GPS &amp; start session</div>
+              <div class="text-muted" style="font-size:.8rem">A unique QR code is generated for the class.</div>
+            </div>
+          </div>
+          <div class="list-group-item border-0 d-flex gap-3 align-items-start py-3">
+            <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width:28px;height:28px;min-width:28px">3</div>
+            <div>
+              <div class="fw-semibold small">Students scan &amp; verify</div>
+              <div class="text-muted" style="font-size:.8rem">Face recognition + GPS check happens automatically.</div>
+            </div>
+          </div>
+          <div class="list-group-item border-0 d-flex gap-3 align-items-start py-3">
+            <div class="badge bg-success rounded-circle d-flex align-items-center justify-content-center" style="width:28px;height:28px;min-width:28px"><i class="bi bi-check" style="font-size:.8rem"></i></div>
+            <div>
+              <div class="fw-semibold small">Attendance auto-recorded</div>
+              <div class="text-muted" style="font-size:.8rem">Only verified students are marked present.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <a href="/smart-attendance/my-sessions" class="card border-0 shadow-sm text-decoration-none text-dark hover-lift d-block">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-secondary-subtle text-secondary rounded-3 fs-5">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <div>
+          <div class="fw-semibold">Past Sessions</div>
+          <div class="text-muted small">View attendance reports for previous classes</div>
+        </div>
+        <i class="bi bi-chevron-right ms-auto text-muted"></i>
+      </div>
+    </a>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── GPS ──
+  const latInput   = document.getElementById('teacherLat');
+  const lngInput   = document.getElementById('teacherLng');
+  const badge      = document.getElementById('gpsBadge');
+  const statusEl   = document.getElementById('gpsStatus');
+  const captureBtn = document.getElementById('captureGpsBtn');
+
+  captureBtn.addEventListener('click', function () {
+    if (!navigator.geolocation) { statusEl.textContent = 'Geolocation not supported.'; return; }
+    captureBtn.disabled = true;
+    captureBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Locating…';
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        latInput.value = lat; lngInput.value = lng;
+        badge.className = 'badge bg-success ms-auto'; badge.textContent = 'Captured ✓';
+        statusEl.innerHTML = '<span class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>' + lat + ', ' + lng + '</span>';
+        captureBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Re-capture'; captureBtn.disabled = false;
+      },
+      function (err) {
+        badge.className = 'badge bg-danger ms-auto'; badge.textContent = 'Failed';
+        statusEl.innerHTML = '<span class="text-danger">Could not get location (' + err.message + '). Location check will be skipped.</span>';
+        captureBtn.innerHTML = '<i class="bi bi-crosshair me-1"></i>Try Again'; captureBtn.disabled = false;
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+
+  // ── Auto-load subjects ──
+  const deptSel    = document.getElementById('deptSelect');
+  const semSel     = document.getElementById('semSelect');
+  const subjSel    = document.getElementById('subjectSelect');
+  const loader     = document.getElementById('subjectLoader');
+  const note       = document.getElementById('subjectNote');
+
+  async function loadSubjects() {
+    const dept = deptSel.value;
+    const sem  = semSel.value;
+    note.classList.add('d-none');
+
+    if (!dept || !sem) {
+      subjSel.innerHTML = '<option value="">— Select dept & semester first —</option>';
+      subjSel.disabled = true;
+      return;
+    }
+
+    loader.classList.remove('d-none');
+    subjSel.disabled = true;
+    subjSel.innerHTML = '<option value="">Loading…</option>';
+
+    try {
+      const params = new URLSearchParams({ department: dept, semester: sem });
+      const res    = await fetch('/subjects/api/my-subjects?' + params);
+      const data   = await res.json();
+
+      loader.classList.add('d-none');
+
+      if (!data.subjects || data.subjects.length === 0) {
+        subjSel.innerHTML = '<option value="">No subjects assigned to you</option>';
+        subjSel.disabled = true;
+        note.classList.remove('d-none');
+      } else {
+        subjSel.innerHTML = '<option value="">Select subject…</option>' +
+          data.subjects.map(s => `<option value="${s.name}">[${s.code}] ${s.name}</option>`).join('');
+        subjSel.disabled = false;
+      }
+    } catch (e) {
+      loader.classList.add('d-none');
+      subjSel.innerHTML = '<option value="">Error loading subjects</option>';
+      subjSel.disabled = true;
+    }
+  }
+
+  deptSel.addEventListener('change', loadSubjects);
+  semSel.addEventListener('change', loadSubjects);
+}());
+</script>
+
+<%- include('../partials/layout_end') %>

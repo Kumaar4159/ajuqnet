@@ -1,0 +1,97 @@
+<%- include('../partials/layout_start') %>
+
+<!-- Stats row -->
+<div class="row g-2 mb-4">
+  <div class="col"><div class="card border-0 shadow-sm text-center py-2"><div class="fw-bold fs-4"><%= oStats.pending||0 %></div><div class="small text-muted">Pending Orders</div></div></div>
+  <div class="col"><div class="card border-0 shadow-sm text-center py-2"><div class="fw-bold fs-4"><%= oStats.delivered||0 %></div><div class="small text-muted">Delivered</div></div></div>
+  <div class="col"><div class="card border-0 shadow-sm text-center py-2"><div class="fw-bold fs-4"><%= bStats.confirmed||0 %></div><div class="small text-muted">Confirmed Bookings</div></div></div>
+  <div class="col"><div class="card border-0 shadow-sm text-center py-2"><div class="fw-bold fs-4"><%= messageStats.reduce((s,d)=>s+d.count,0) %></div><div class="small text-muted">Messages (7d)</div></div></div>
+</div>
+
+<!-- Filter bar -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form class="d-flex flex-wrap gap-2" method="GET">
+      <input type="text" name="search" class="form-control form-control-sm" style="width:200px" placeholder="Search name or email" value="<%= search %>">
+      <select name="role" class="form-select form-select-sm" style="width:140px">
+        <option value="">All roles</option>
+        <% ['admin','faculty','student','canteen'].forEach(r => { %><option value="<%= r %>" <%=filterRole===r?'selected':''%>><%= r.charAt(0).toUpperCase()+r.slice(1) %></option><% }) %>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      <a href="/admin" class="btn btn-outline-secondary btn-sm">Reset</a>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-0 d-flex justify-content-between">
+    <span class="fw-semibold">Users (<%= total %>)</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <% users.forEach(u => { %>
+        <tr>
+          <td class="fw-semibold"><%= u.name %><% if (u.studentId) { %><br><small class="text-muted"><%= u.studentId %></small><% } %></td>
+          <td class="small text-muted"><%= u.email %></td>
+          <td><%- include('../partials/status_badge', { status: u.role }) %></td>
+          <td>
+            <% if (u.isLockedNow) { %><span class="badge bg-warning text-dark"><i class="bi bi-lock me-1"></i>Locked</span><% } else if (!u.isActive) { %><span class="badge bg-secondary">Inactive</span><% } else { %><span class="badge bg-success">Active</span><% } %>
+          </td>
+          <td class="small text-muted"><%= u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never' %></td>
+          <td>
+            <div class="d-flex gap-1 flex-wrap">
+              <% if (u.isLockedNow) { %>
+              <form action="/admin/users/<%= u._id %>/unlock" method="POST">
+                <button class="btn btn-xs btn-outline-warning" title="Unlock"><i class="bi bi-unlock"></i></button>
+              </form>
+              <% } %>
+              <% if (u._id.toString() !== user.id) { %>
+              <form action="/admin/users/<%= u._id %>/deactivate" method="POST">
+                <button class="btn btn-xs btn-outline-<%= u.isActive ? 'secondary' : 'success' %>" title="<%= u.isActive ? 'Deactivate' : 'Activate' %>">
+                  <i class="bi bi-<%= u.isActive ? 'person-x' : 'person-check' %>"></i>
+                </button>
+              </form>
+              <button class="btn btn-xs btn-outline-primary" data-bs-toggle="modal" data-bs-target="#roleModal<%= u._id %>"><i class="bi bi-person-gear"></i></button>
+              <form action="/admin/users/<%= u._id %>/delete" method="POST" onsubmit="return confirm('Delete user <%= u.name %>?')">
+                <button class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+              <% } %>
+            </div>
+            <!-- Role change modal -->
+            <div class="modal fade" id="roleModal<%= u._id %>" tabindex="-1">
+              <div class="modal-dialog modal-sm">
+                <div class="modal-content border-0 shadow">
+                  <form action="/admin/users/<%= u._id %>/role" method="POST">
+                    <div class="modal-header border-0"><h6 class="modal-title">Change Role: <%= u.name %></h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                      <select name="role" class="form-select form-select-sm">
+                        <% ['admin','faculty','student','canteen'].forEach(r => { %><option value="<%= r %>" <%=u.role===r?'selected':''%>><%= r %></option><% }) %>
+                      </select>
+                    </div>
+                    <div class="modal-footer border-0">
+                      <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+<% if (pages > 1) { %>
+<nav class="mt-3"><ul class="pagination pagination-sm justify-content-center">
+  <% for(let i=1;i<=pages;i++) { %><li class="page-item <%=page===i?'active':''%>"><a class="page-link" href="/admin?page=<%= i %>&role=<%= filterRole||'' %>&search=<%= search %>"><%= i %></a></li><% } %>
+</ul></nav>
+<% } %>
+
+<%- include('../partials/layout_end') %>

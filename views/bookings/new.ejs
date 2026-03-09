@@ -1,0 +1,65 @@
+<%- include('../partials/layout_start') %>
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold">New Table Booking</div>
+      <div class="card-body">
+        <% if (error) { %><div class="alert alert-danger small"><i class="bi bi-exclamation-triangle me-1"></i><%= error %></div><% } %>
+
+        <form action="/bookings" method="POST" id="bookingForm">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Table *</label>
+              <select name="tableId" class="form-select" required>
+                <option value="">Select a table...</option>
+                <% tables.forEach(t => { %>
+                <option value="<%= t._id %>" <%=(prefill.tableId===t._id.toString()||prefill.tableId===t._id)?'selected':''%>>
+                  <%= t.tableNumber %> — <%= t.section %> (cap: <%= t.capacity %>)
+                  <% t.amenities?.forEach(a => { %> · <%= a.replace(/_/g,' ') %><% }) %>
+                </option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Date *</label>
+              <input type="date" name="date" class="form-control" value="<%= prefill.date||'' %>" required min="<%= new Date().toISOString().split('T')[0] %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Guest Count *</label>
+              <input type="number" name="guestCount" class="form-control" min="1" max="30" value="<%= prefill.guestCount||1 %>" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Start Time *</label>
+              <input type="datetime-local" name="startTime" class="form-control" value="<%= prefill.startTime||'' %>" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Duration</label>
+              <select name="durationMinutes" class="form-select">
+                <% [30,60,90,120,180,240,480].forEach(d => { %>
+                  <option value="<%= d %>" <%- parseInt(prefill.durationMinutes)===d ? 'selected' : '' %>><%= d >= 60 ? (Math.floor(d/60)+'h'+(d%60 ? d%60+'m' : '')) : (d+'min') %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Purpose</label>
+              <select name="purpose" class="form-select">
+                <% ['dining','meeting','study','event','other'].forEach(p => { %>
+                  <option value="<%= p %>" <%=prefill.purpose===p?'selected':''%>><%= p.charAt(0).toUpperCase()+p.slice(1) %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Special Requests</label>
+              <textarea name="specialRequests" class="form-control" rows="2" placeholder="Any special requirements..."><%= prefill.specialRequests||'' %></textarea>
+            </div>
+            <div class="col-12 d-flex gap-2 mt-2">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-calendar-check me-1"></i>Confirm Booking</button>
+              <a href="/bookings" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/layout_end') %>

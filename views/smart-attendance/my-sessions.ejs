@@ -1,0 +1,110 @@
+<%- include('../partials/layout_start') %>
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <div class="d-flex align-items-center gap-2">
+    <div class="stat-icon bg-secondary-subtle text-secondary rounded-3 fs-4">
+      <i class="bi bi-clock-history"></i>
+    </div>
+    <div>
+      <h5 class="mb-0 fw-bold">My Class Sessions</h5>
+      <div class="text-muted small">All attendance sessions you've started</div>
+    </div>
+  </div>
+  <a href="/smart-attendance/start-session" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>Start New Session
+  </a>
+</div>
+
+<% if (sessions.length === 0) { %>
+<div class="card border-0 shadow-sm">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-calendar-x fs-1 text-muted d-block mb-2"></i>
+    <div class="text-muted">No sessions yet. Start your first class session!</div>
+    <a href="/smart-attendance/start-session" class="btn btn-primary mt-3">
+      <i class="bi bi-plus-circle me-1"></i>Start Session
+    </a>
+  </div>
+</div>
+<% } else { %>
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between pt-3">
+    <span class="fw-semibold"><i class="bi bi-list-ul text-primary me-1"></i>Sessions (<%= sessions.length %>)</span>
+    <input type="text" id="sessionSearch" class="form-control form-control-sm" style="max-width:200px" placeholder="Search subject…">
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Subject</th>
+          <th>Department</th>
+          <th>Room</th>
+          <th>Started</th>
+          <th>Duration</th>
+          <th>Status</th>
+          <th>Attendance</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% sessions.forEach(function(s) { %>
+        <tr class="session-row">
+          <td class="ps-3 fw-semibold"><%= s.subject %></td>
+          <td class="text-muted small"><%= s.department %></td>
+          <td class="text-muted small"><%= s.room %></td>
+          <td class="text-muted small"><%= new Date(s.startTime).toLocaleDateString('en-IN', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) %></td>
+          <td class="text-muted small"><%= s.durationMinutes %> min</td>
+          <td>
+            <% if (s.status === 'active' && !s.isExpired) { %>
+            <span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>
+            <% } else if (s.status === 'closed') { %>
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Closed</span>
+            <% } else { %>
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Expired</span>
+            <% } %>
+          </td>
+          <td>
+            <% if (s.attendanceCount > 0) { %>
+            <span class="fw-semibold small text-success"><%= s.presentCount %></span>
+            <span class="text-muted small">/ <%= s.attendanceCount %></span>
+            <% if (s.attendancePct !== null) { %>
+            <span class="badge bg-primary-subtle text-primary ms-1"><%= s.attendancePct %>%</span>
+            <% } %>
+            <% } else { %>
+            <span class="text-muted small">—</span>
+            <% } %>
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <% if (s.status === 'active' && !s.isExpired) { %>
+              <a href="/smart-attendance/qr/<%= s._id %>" class="btn btn-xs btn-outline-primary" title="View QR">
+                <i class="bi bi-qr-code"></i>
+              </a>
+              <% } %>
+              <a href="/smart-attendance/faculty-report/<%= s._id %>" class="btn btn-xs btn-outline-secondary" title="View Report">
+                <i class="bi bi-bar-chart"></i>
+              </a>
+              <form action="/smart-attendance/delete/<%= s._id %>" method="POST" style="display:inline" onsubmit="return confirm('Delete this session? This cannot be undone.')">
+                <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete Session">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<script>
+  document.getElementById('sessionSearch')?.addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.session-row').forEach(function (row) {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+</script>
+
+<%- include('../partials/layout_end') %>

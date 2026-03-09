@@ -1,0 +1,142 @@
+<%- include('../partials/layout_start') %>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-megaphone-fill text-primary"></i> New Announcement
+      </div>
+      <div class="card-body">
+        <% if (error) { %>
+        <div class="alert alert-danger py-2 small">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i><%= error %>
+        </div>
+        <% } %>
+
+        <form action="/announcements" method="POST" >
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Title <span class="text-danger">*</span></label>
+            <input type="text" name="title" value="<%= prefill.title || '' %>"
+                   class="form-control" placeholder="Short, clear title" maxlength="150" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Message <span class="text-danger">*</span></label>
+            <textarea name="message" rows="5" class="form-control"
+                      placeholder="Write your announcement here…"
+                      maxlength="2000" required><%= prefill.message || '' %></textarea>
+            <div class="form-text text-end small" id="msgCount">0 / 2000</div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold small">Audience / Department</label>
+              <input type="text" name="department" value="<%= prefill.department || 'all' %>"
+                     class="form-control form-control-sm"
+                     placeholder="all  (or  Computer Science, etc.)">
+              <div class="form-text small">Use <code>all</code> to target everyone.</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold small">Priority</label>
+              <select name="priority" class="form-select form-select-sm">
+                <option value="info"    <%= (prefill.priority||'info')==='info'    ? 'selected':'' %>>ℹ️ Info</option>
+                <option value="warning" <%= prefill.priority==='warning' ? 'selected':'' %>>⚠️ Warning</option>
+                <option value="urgent"  <%= prefill.priority==='urgent'  ? 'selected':'' %>>🚨 Urgent</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold small">Expires On <span class="text-muted">(optional)</span></label>
+              <input type="date" name="expiresAt" value="<%= prefill.expiresAt || '' %>"
+                     class="form-control form-control-sm">
+              <div class="form-text small">Leave blank to never expire.</div>
+            </div>
+            <div class="col-sm-6 d-flex align-items-end pb-1">
+              <div class="form-check">
+                <input type="checkbox" name="pinned" id="pinned" class="form-check-input"
+                       <%= prefill.pinned === 'on' ? 'checked' : '' %>>
+                <label for="pinned" class="form-check-label small fw-semibold">
+                  <i class="bi bi-pin-angle-fill text-warning me-1"></i>Pin to top
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- File attachment -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Attach File <span class="text-muted">(optional — PDF, image, Word, max 2MB)</span></label>
+            <input type="file" id="attachmentInput" class="form-control form-control-sm"
+                   accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.ppt,.pptx,.xls,.xlsx,.txt">
+            <div class="form-text small" id="attachInfo"></div>
+            <input type="hidden" name="attachData" id="attachData">
+            <input type="hidden" name="attachName" id="attachName">
+            <input type="hidden" name="attachType" id="attachType">
+            <input type="hidden" name="attachSize" id="attachSize">
+          </div>
+
+          <!-- Live preview -->
+          <div class="border rounded-3 p-3 mb-3 bg-body-secondary" id="previewBox" style="display:none">
+            <div class="small fw-bold text-muted mb-1">PREVIEW</div>
+            <div class="fw-semibold" id="previewTitle"></div>
+            <div class="small text-muted mt-1" id="previewMsg" style="white-space:pre-wrap"></div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-send-fill me-1"></i>Publish Announcement
+            </button>
+            <a href="/announcements" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var msgArea    = document.querySelector('textarea[name="message"]');
+var msgCount   = document.getElementById('msgCount');
+var titleIn    = document.querySelector('input[name="title"]');
+var previewBox = document.getElementById('previewBox');
+var prevTitle  = document.getElementById('previewTitle');
+var prevMsg    = document.getElementById('previewMsg');
+
+function updatePreview() {
+  var t = titleIn.value.trim();
+  var m = msgArea.value.trim();
+  if (t || m) {
+    previewBox.style.display = '';
+    prevTitle.textContent = t;
+    prevMsg.textContent   = m;
+  } else {
+    previewBox.style.display = 'none';
+  }
+  msgCount.textContent = msgArea.value.length + ' / 2000';
+}
+document.getElementById('attachmentInput').addEventListener('change', function() {
+  var f = this.files[0];
+  var info = document.getElementById('attachInfo');
+  if (!f) return;
+  if (f.size > 2 * 1024 * 1024) {
+    info.innerHTML = '<span class="text-danger">File too large! Max 2MB.</span>';
+    this.value = '';
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('attachData').value = e.target.result; // full data URL
+    document.getElementById('attachName').value = f.name;
+    document.getElementById('attachType').value = f.type;
+    document.getElementById('attachSize').value = f.size;
+    info.innerHTML = '<span class="text-success">✓ ' + f.name + ' (' + (f.size/1024).toFixed(1) + ' KB) — ready to attach</span>';
+  };
+  reader.readAsDataURL(f);
+});
+msgArea.addEventListener('input', updatePreview);
+titleIn.addEventListener('input', updatePreview);
+updatePreview();
+</script>
+
+<%- include('../partials/layout_end') %>

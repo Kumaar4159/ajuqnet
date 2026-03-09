@@ -1,0 +1,227 @@
+<%- include('../partials/layout_start') %>
+
+<!-- Top stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card card h-100 border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-primary-subtle text-primary rounded-3"><i class="bi bi-people-fill fs-4"></i></div>
+          <div><div class="fs-2 fw-bold"><%= stats.totalUsers %></div><div class="text-muted small">Total Users</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card card h-100 border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-success-subtle text-success rounded-3"><i class="bi bi-mortarboard fs-4"></i></div>
+          <div><div class="fs-2 fw-bold"><%= stats.students %></div><div class="text-muted small">Students</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card card h-100 border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-warning-subtle text-warning rounded-3"><i class="bi bi-bag-check fs-4"></i></div>
+          <div><div class="fs-2 fw-bold"><%= stats.pendingOrders %></div><div class="text-muted small">Pending Orders</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card card h-100 border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-danger-subtle text-danger rounded-3"><i class="bi bi-shield-lock fs-4"></i></div>
+          <div><div class="fs-2 fw-bold"><%= stats.lockedAccounts %></div><div class="text-muted small">Locked Accounts</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Department Analytics Row -->
+<div class="row g-3 mb-4">
+  <!-- Department Student Distribution Chart -->
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-pie-chart-fill text-primary me-2"></i>Students by Department
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="deptPieChart" style="max-height:240px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Department Cards -->
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-building me-2 text-info"></i>Department Overview
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr><th class="ps-3">Department</th><th class="text-center">Students</th><th class="text-center">Faculty</th><th>Distribution</th></tr>
+            </thead>
+            <tbody>
+              <% const deptColors = {'Computer Science':'primary','Electrical & Electronics':'warning','Mechanical':'success'}; %>
+              <% deptStats.forEach(d => { const col = deptColors[d._id] || 'secondary'; %>
+              <tr>
+                <td class="ps-3 fw-semibold"><%= d._id %></td>
+                <td class="text-center"><span class="badge bg-<%= col %>"><%= d.count %></span></td>
+                <td class="text-center text-muted small">2</td>
+                <td>
+                  <div class="progress" style="height:8px">
+                    <div class="progress-bar bg-<%= col %>" style="width:<%= Math.round(d.count/stats.students*100) %>%"></div>
+                  </div>
+                  <div class="text-muted" style="font-size:.7rem"><%= Math.round(d.count/stats.students*100) %>%</div>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-3 border-top d-flex gap-2">
+          <a href="/subjects" class="btn btn-outline-info btn-sm"><i class="bi bi-book me-1"></i>Manage Subjects</a>
+          <a href="/admin" class="btn btn-outline-danger btn-sm"><i class="bi bi-shield-lock me-1"></i>Audit Panel</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Semester Breakdown + User Breakdown -->
+<div class="row g-3 mb-4">
+  <!-- Semester bar chart -->
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">
+        <i class="bi bi-bar-chart-fill text-success me-2"></i>Students per Semester (by Department)
+      </div>
+      <div class="card-body">
+        <canvas id="semBarChart" style="max-height:250px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role breakdown -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 fw-semibold pt-3">User Breakdown</div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+          <span><i class="bi bi-shield-fill text-danger me-2"></i>Admins</span><span class="badge bg-danger"><%= stats.admins %></span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+          <span><i class="bi bi-person-workspace text-primary me-2"></i>Faculty</span><span class="badge bg-primary"><%= stats.faculty %></span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+          <span><i class="bi bi-mortarboard text-success me-2"></i>Students</span><span class="badge bg-success"><%= stats.students %></span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center py-2">
+          <span><i class="bi bi-chat-dots text-info me-2"></i>Messages Today</span><span class="badge bg-info"><%= stats.todayMessages %></span>
+        </div>
+        <div class="mt-3 d-grid">
+          <a href="/orders/stats" class="btn btn-outline-primary btn-sm"><i class="bi bi-bar-chart me-1"></i>Order Stats</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recently registered -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-0 fw-semibold pt-3">Recently Registered</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th class="ps-3">Name</th><th>Email</th><th>Role</th><th>Department</th><th>Joined</th></tr></thead>
+        <tbody>
+          <% recentUsers.forEach(u => { %>
+          <tr>
+            <td class="ps-3 fw-semibold"><%= u.name %></td>
+            <td class="text-muted small"><%= u.email %></td>
+            <td><%- include('../partials/status_badge', { status: u.role }) %></td>
+            <td class="small text-muted"><%= u.department || '—' %></td>
+            <td class="small text-muted"><%= new Date(u.createdAt).toLocaleDateString() %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  // ── Dept pie chart ──
+  const deptData = <%- JSON.stringify(deptStats) %>;
+  const semData  = <%- JSON.stringify(semStats) %>;
+
+  const DEPT_COLORS = {
+    'Computer Science': '#0d6efd',
+    'Electrical & Electronics': '#ffc107',
+    'Mechanical': '#198754',
+  };
+
+  if (deptData.length) {
+    new Chart(document.getElementById('deptPieChart'), {
+      type: 'doughnut',
+      data: {
+        labels: deptData.map(d => d._id),
+        datasets: [{
+          data: deptData.map(d => d.count),
+          backgroundColor: deptData.map(d => DEPT_COLORS[d._id] || '#6c757d'),
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+        cutout: '60%',
+      },
+    });
+  }
+
+  // ── Semester bar chart ──
+  const sems   = ['1','2','3','4','5','6'];
+  const depts  = [...new Set(semData.map(s => s._id.department))].sort();
+  const datasets = depts.map(dept => ({
+    label: dept,
+    data: sems.map(sem => {
+      const found = semData.find(s => s._id.department === dept && s._id.semester === sem);
+      return found ? found.count : 0;
+    }),
+    backgroundColor: DEPT_COLORS[dept] || '#6c757d',
+    borderRadius: 4,
+  }));
+
+  if (datasets.length) {
+    new Chart(document.getElementById('semBarChart'), {
+      type: 'bar',
+      data: {
+        labels: sems.map(s => 'Sem ' + s),
+        datasets,
+      },
+      options: {
+        plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+        scales: {
+          x: { stacked: false },
+          y: { beginAtZero: true, ticks: { stepSize: 1 } },
+        },
+        responsive: true,
+        maintainAspectRatio: true,
+      },
+    });
+  }
+})();
+</script>
+
+<%- include('../partials/layout_end') %>

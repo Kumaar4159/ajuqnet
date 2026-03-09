@@ -1,0 +1,46 @@
+<%- include('../partials/layout_start') %>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 fw-semibold">Orders by Status</div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="table-light"><tr><th>Status</th><th class="text-end">Count</th><th class="text-end">Revenue</th></tr></thead>
+          <tbody>
+            <% Object.entries(byStatus).forEach(([s, d]) => { %>
+            <tr>
+              <td><%- include('../partials/status_badge', { status: s }) %></td>
+              <td class="text-end"><%= d.count %></td>
+              <td class="text-end">₹<%= (d.revenue||0).toFixed(2) %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+          <tfoot class="table-light">
+            <tr><td colspan="2" class="text-end fw-bold">Total Revenue (delivered)</td><td class="text-end fw-bold text-primary">₹<%= totalRevenue.toFixed(2) %></td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 fw-semibold">Top 5 Ordered Items</div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="table-light"><tr><th>Item</th><th class="text-end">Qty Sold</th><th class="text-end">Revenue</th></tr></thead>
+          <tbody>
+            <% topItems.forEach(item => { %>
+            <tr>
+              <td class="fw-semibold"><%= item._id %></td>
+              <td class="text-end"><%= item.totalQty %></td>
+              <td class="text-end">₹<%= item.totalRevenue.toFixed(2) %></td>
+            </tr>
+            <% }) %>
+            <% if (!topItems.length) { %><tr><td colspan="3" class="text-center text-muted">No data yet</td></tr><% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/layout_end') %>

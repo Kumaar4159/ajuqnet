@@ -1,0 +1,134 @@
+<%- include('../partials/layout_start') %>
+
+<div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <% [
+    { val: '',          label: 'Active' },
+    { val: 'pending',   label: 'Pending' },
+    { val: 'confirmed', label: 'Confirmed' },
+    { val: 'preparing', label: 'Preparing' },
+    { val: 'ready',     label: 'Ready' },
+    { val: 'delivered', label: 'Delivered' },
+    { val: 'cancelled', label: 'Cancelled' },
+  ].forEach(function(s) { %>
+  <a href="/canteen/orders?status=<%= s.val %>"
+     class="btn btn-sm <%= status === s.val ? 'btn-primary' : 'btn-outline-secondary' %>">
+    <%= s.label %>
+  </a>
+  <% }) %>
+  <span class="ms-auto text-muted small"><%= total %> order(s)</span>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash.success) { %>
+  <div class="alert alert-success alert-sm py-2 small"><i class="bi bi-check-circle me-1"></i><%= flash.success %></div>
+<% } %>
+<% if (typeof flash !== 'undefined' && flash.error) { %>
+  <div class="alert alert-danger alert-sm py-2 small"><i class="bi bi-exclamation-triangle me-1"></i><%= flash.error %></div>
+<% } %>
+
+<% if (orders.length === 0) { %>
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-bag fs-1"></i>
+    <div class="mt-2">No orders found for this filter.</div>
+  </div>
+<% } else { %>
+
+<div class="row g-3" id="ordersGrid">
+  <% orders.forEach(function(o) { %>
+  <div class="col-md-6 col-xl-4" id="order-card-<%= o._id %>">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-2">
+        <span class="fw-semibold small text-primary"><%= o.orderNumber %></span>
+        <span id="status-badge-<%= o._id %>"><%- include('../partials/status_badge', { status: o.status }) %></span>
+      </div>
+      <div class="card-body py-2">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div class="sidebar-avatar" style="width:28px;height:28px;font-size:.75rem">
+            <%= o.placedByName.charAt(0).toUpperCase() %>
+          </div>
+          <div>
+            <div class="fw-semibold small"><%= o.placedByName %></div>
+            <div class="text-muted" style="font-size:.7rem"><%= o.placedByRole %></div>
+          </div>
+          <div class="ms-auto text-muted small">
+            <%= new Date(o.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %>
+          </div>
+        </div>
+
+        <ul class="list-unstyled mb-2 small">
+          <% o.items.forEach(function(item) { %>
+          <li class="d-flex justify-content-between py-1 border-bottom">
+            <span><%= item.name %> <span class="text-muted">×<%= item.quantity %></span></span>
+            <span class="text-muted">₹<%= item.subtotal.toFixed(2) %></span>
+          </li>
+          <% }) %>
+        </ul>
+
+        <div class="d-flex justify-content-between fw-semibold small">
+          <span>Total</span><span class="text-primary">₹<%= o.total.toFixed(2) %></span>
+        </div>
+        <% if (o.deliveryLocation) { %>
+        <div class="text-muted mt-1" style="font-size:.75rem"><i class="bi bi-geo-alt me-1"></i><%= o.deliveryLocation %></div>
+        <% } %>
+        <% if (o.notes) { %>
+        <div class="text-muted mt-1" style="font-size:.75rem"><i class="bi bi-sticky me-1"></i><%= o.notes %></div>
+        <% } %>
+      </div>
+
+      <%
+        const canteenTransitions = {
+  pending: ['confirmed','cancelled'], confirmed: ['preparing','cancelled'], preparing: ['ready','cancelled'],
+  ready: ['delivered'], delivered: [], cancelled: [],
+};
+        const next = canteenTransitions[o.status] || [];
+      %>
+      <% if (next.length > 0) { %>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <form action="/canteen/orders/<%= o._id %>/status" method="POST">
+          <div class="d-flex gap-2 align-items-center mb-1">
+            <select name="status" class="form-select form-select-sm flex-grow-1">
+              <% next.forEach(function(s) { %>
+              <option value="<%= s %>" <%= s==='cancelled' ? 'style="color:#dc3545"' : '' %>><%= s.charAt(0).toUpperCase()+s.slice(1) %></option>
+              <% }) %>
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-arrow-right-circle"></i></button>
+          </div>
+          <input type="text" name="note" class="form-control form-control-sm" placeholder="Optional note (e.g. item substituted)..." maxlength="200">
+        </form>
+      </div>
+      <% } %>
+    </div>
+  </div>
+  <% }) %>
+</div>
+
+<% if (pages > 1) { %>
+<nav class="mt-4"><ul class="pagination pagination-sm justify-content-center">
+  <% for (let i = 1; i <= pages; i++) { %>
+  <li class="page-item <%= page === i ? 'active' : '' %>">
+    <a class="page-link" href="/canteen/orders?page=<%= i %>&status=<%= status %>"><%= i %></a>
+  </li>
+  <% } %>
+</ul></nav>
+<% } %>
+<% } %>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function () {
+  var colourMap = { pending:'warning', confirmed:'info', preparing:'primary', ready:'success', delivered:'secondary', cancelled:'danger' };
+  function makeBadge(status) {
+    return '<span class="badge bg-' + (colourMap[status]||'secondary') + '">' + status.charAt(0).toUpperCase()+status.slice(1) + '</span>';
+  }
+  var socket = io({ transports: ['websocket','polling'] });
+  socket.on('order:statusUpdate', function (data) {
+    var badge = document.getElementById('status-badge-' + data.orderId);
+    if (badge) badge.innerHTML = makeBadge(data.status);
+    if (['delivered','cancelled'].includes(data.status)) {
+      var card = document.getElementById('order-card-' + data.orderId);
+      if (card) { card.style.transition='opacity .5s'; setTimeout(function(){ card.style.opacity='0.35'; },100); }
+    }
+  });
+})();
+</script>
+
+<%- include('../partials/layout_end') %>

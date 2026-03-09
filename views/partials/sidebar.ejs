@@ -1,0 +1,178 @@
+<nav id="sidebar" class="d-flex flex-column p-0" style="height:100vh;max-height:100vh;overflow:hidden;">
+  <!-- Brand -->
+  <a href="/dashboard" class="sidebar-brand d-flex align-items-center gap-2 px-3 py-2 text-decoration-none">
+    <i class="bi bi-mortarboard-fill fs-4"></i>
+    <span class="fw-bold">AJUQNET</span>
+  </a>
+  <hr class="sidebar-divider">
+
+  <!-- Main nav -->
+  <ul class="nav nav-pills flex-column nav-scroll px-2 gap-0">
+    <li class="nav-item">
+      <a href="/dashboard" class="nav-link sidebar-link <%= currentPath.startsWith('/dashboard') ? 'active' : '' %>">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="/menu" class="nav-link sidebar-link <%= currentPath.startsWith('/menu') ? 'active' : '' %>">
+        <i class="bi bi-menu-button-wide"></i> Menu
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="/orders" class="nav-link sidebar-link <%= currentPath.startsWith('/orders') ? 'active' : '' %>">
+        <i class="bi bi-bag-check"></i> Orders
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="/tables" class="nav-link sidebar-link <%= currentPath.startsWith('/tables') ? 'active' : '' %>">
+        <i class="bi bi-grid-1x2"></i> Tables
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="/bookings" class="nav-link sidebar-link <%= currentPath.startsWith('/bookings') ? 'active' : '' %>">
+        <i class="bi bi-calendar-check"></i> Bookings
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="/chat" class="nav-link sidebar-link <%= currentPath.startsWith('/chat') ? 'active' : '' %>">
+        <i class="bi bi-chat-dots"></i> Chat
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="/announcements" class="nav-link sidebar-link <%= currentPath.startsWith('/announcements') ? 'active' : '' %>">
+        <i class="bi bi-megaphone"></i> Announcements
+      </a>
+    </li>
+
+    <% if (user && user.role === 'student') { %>
+    <li class="nav-item">
+      <a href="/attendance/view" class="nav-link sidebar-link <%= currentPath.startsWith('/attendance/view') ? 'active' : '' %>">
+        <i class="bi bi-person-check"></i> My Attendance
+      </a>
+    </li>
+    <% } %>
+
+    <% if (user && user.role === 'faculty') { %>
+    <li class="nav-item">
+      <small class="sidebar-label px-2">ACADEMIC</small>
+    </li>
+    <li class="nav-item">
+      <a href="/attendance/mark" class="nav-link sidebar-link <%= currentPath.startsWith('/attendance/mark') ? 'active' : '' %>">
+        <i class="bi bi-person-check-fill"></i> Mark Attendance
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="/attendance/report" class="nav-link sidebar-link <%= currentPath.startsWith('/attendance/report') ? 'active' : '' %>">
+        <i class="bi bi-file-earmark-bar-graph"></i> Attendance Report
+      </a>
+    </li>
+    <% } %>
+
+    <!-- ── Smart Attendance ── -->
+    <% if (user && (user.role === 'faculty' || user.role === 'student' || user.role === 'admin')) { %>
+    <li class="nav-item">
+      <small class="sidebar-label px-2">SMART ATTENDANCE</small>
+    </li>
+    <% } %>
+    <% if (user && user.role === 'student') { %>
+    <li class="nav-item">
+      <a href="/smart-attendance/scan" class="nav-link sidebar-link <%= currentPath.startsWith('/smart-attendance/scan') ? 'active' : '' %>">
+        <i class="bi bi-qr-code-scan"></i> Scan QR
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="/smart-attendance/student-report" class="nav-link sidebar-link <%= currentPath.startsWith('/smart-attendance/student-report') ? 'active' : '' %>">
+        <i class="bi bi-bar-chart-fill"></i> My Analytics
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="/smart-attendance/face-setup" class="nav-link sidebar-link <%= currentPath.startsWith('/smart-attendance/face-setup') ? 'active' : '' %>">
+        <i class="bi bi-person-bounding-box"></i> Face Setup
+      </a>
+    </li>
+    <% } %>
+    <% if (user && user.role === 'faculty') { %>
+    <li class="nav-item">
+      <a href="/smart-attendance/start-session" class="nav-link sidebar-link <%= currentPath.startsWith('/smart-attendance/start-session') ? 'active' : '' %>">
+        <i class="bi bi-qr-code"></i> Start Session
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="/smart-attendance/my-sessions" class="nav-link sidebar-link <%= currentPath.startsWith('/smart-attendance/my-sessions') ? 'active' : '' %>">
+        <i class="bi bi-clock-history"></i> My Sessions
+      </a>
+    </li>
+    <% } %>
+    <% if (user && user.role === 'admin') { %>
+    <li class="nav-item">
+      <a href="/smart-attendance/admin-analytics" class="nav-link sidebar-link <%= currentPath.startsWith('/smart-attendance/admin-analytics') ? 'active' : '' %>">
+        <i class="bi bi-graph-up-arrow"></i> Attendance Analytics
+      </a>
+    </li>
+    <% } %>
+
+    <% if (user && user.role === 'canteen') { %>
+    <li class="nav-item">
+      <small class="sidebar-label px-2">CANTEEN STAFF</small>
+    </li>
+    <li class="nav-item">
+      <a href="/canteen/orders" class="nav-link sidebar-link <%= currentPath.startsWith('/canteen/orders') ? 'active' : '' %>">
+        <i class="bi bi-bag-check-fill"></i> Orders Management
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="/canteen/bookings" class="nav-link sidebar-link <%= currentPath.startsWith('/canteen/bookings') ? 'active' : '' %>">
+        <i class="bi bi-calendar2-week-fill"></i> Table Bookings
+      </a>
+    </li>
+    <% } %>
+
+    <% if (user && user.role === 'admin') { %>
+    <li class="nav-item">
+      <small class="sidebar-label px-2">ADMIN</small>
+    </li>
+    <li class="nav-item">
+      <a href="/admin" class="nav-link sidebar-link <%= currentPath.startsWith('/admin') ? 'active' : '' %>">
+        <i class="bi bi-shield-lock"></i> Audit Panel
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="/subjects" class="nav-link sidebar-link <%= currentPath.startsWith('/subjects') ? 'active' : '' %>">
+        <i class="bi bi-book-half"></i> Subject Management
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="/orders/stats" class="nav-link sidebar-link">
+        <i class="bi bi-bar-chart"></i> Order Stats
+      </a>
+    </li>
+    <% } %>
+  </ul>
+
+  <!-- User footer -->
+  <div class="sidebar-footer px-2 py-2 border-top">
+    <% if (user) { %>
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <div class="sidebar-avatar"><%= user.name.charAt(0).toUpperCase() %></div>
+      <div class="overflow-hidden">
+        <div class="fw-semibold text-truncate small"><%= user.name %></div>
+        <div class="sidebar-role badge"><%= user.role %></div>
+      </div>
+    </div>
+    <a href="/dashboard/profile" class="btn btn-outline-secondary btn-sm w-100 mb-1">
+      <i class="bi bi-person-circle"></i> Profile
+    </a>
+    <form action="/auth/logout" method="POST">
+      <button type="submit" class="btn btn-danger btn-sm w-100">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </button>
+    </form>
+    <% } %>
+  </div>
+</nav>
