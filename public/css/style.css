@@ -515,3 +515,11 @@ body.dark-mode .notif-icon.system  { background: #1e293b; color: #94a3b8; }
   max-width: 100%;
   display: block;
 }
+/* ── Fix: sidebar footer sticks to bottom ── */
+#sidebar {
+  justify-content: space-between;
+}
+
+#sidebar .nav-scroll ul {
+  flex: 0;
+}
