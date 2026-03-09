@@ -495,3 +495,23 @@ body.dark-mode .notif-icon.system  { background: #1e293b; color: #94a3b8; }
   overflow: hidden;
   min-width: 0;
 }
+/* ── Fix: announcement row text overflow ── */
+.card-body.p-0 .d-flex.gap-3 {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.card-body.p-0 .d-flex.gap-3 > div:last-child {
+  min-width: 0;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.card-body.p-0 .d-flex.gap-3 .fw-semibold.small,
+.card-body.p-0 .d-flex.gap-3 .text-muted.small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: block;
+}
