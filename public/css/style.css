@@ -89,7 +89,8 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  max-height: 100vh;
+  height: 100dvh;        /* ← ADD THIS */
+  max-height: 100dvh;
   flex-shrink: 0;
 }
 #sidebar .nav-scroll {
@@ -484,11 +485,6 @@ body.dark-mode .notif-icon.system  { background: #1e293b; color: #94a3b8; }
 
 /* ── ADD THIS BELOW ─────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  #sidebar {
-    height: 100vh;
-    height: 100dvh;
-  }
-
   .sidebar-footer {
     padding-bottom: env(safe-area-inset-bottom, 0px);
     flex-shrink: 0;
