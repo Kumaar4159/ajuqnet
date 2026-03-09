@@ -71,12 +71,12 @@ body {
   font-size: .9375rem;
   margin: 0;
   height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
   overflow: hidden;
   transition: background .25s, color .25s;
 }
 
-.app-wrapper { display: flex; height: 100vh; overflow: hidden; }
-
+.app-wrapper { display: flex; height: 100vh; height: calc(var(--vh, 1vh) * 100); overflow: hidden; }
 /* ── Sidebar ─────────────────────────────────────────────────────── */
 #sidebar {
   width: var(--sidebar-w);
@@ -90,8 +90,8 @@ body {
   flex-direction: column;
   justify-content: space-between;
   height: 100vh;
-  height: 100dvh;        /* ← ADD THIS */
-  max-height: 100dvh;
+  height: calc(var(--vh, 1vh) * 100);
+  max-height: calc(var(--vh, 1vh) * 100);
   flex-shrink: 0;
 }
 #sidebar .nav-scroll {
@@ -481,22 +481,28 @@ body.dark-mode .notif-icon.system  { background: #1e293b; color: #94a3b8; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-/* existing last line */
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-/* ── ADD THIS BELOW ─────────────────────────────────────────────── */
-@media (max-width: 767px) {
-  .sidebar-footer {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    flex-shrink: 0;
-  }
+/* ── Fix: sidebar footer sticks to bottom ── */
+#sidebar {
+  justify-content: space-between;
 }
+
+#sidebar .nav-scroll ul {
+  flex: 0;
+}
+
+/* ── Fix: sidebar footer safe area (Android gesture bar) ── */
+.sidebar-footer {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  flex-shrink: 0;
+}
+
 /* ── Fix: announcement text overflow on mobile ── */
 .card .d-flex.gap-3 .flex-grow-1 {
   overflow: hidden;
   min-width: 0;
 }
-/* ── Fix: announcement row text overflow ── */
+
 .card-body.p-0 .d-flex.gap-3 {
   min-width: 0;
   max-width: 100%;
@@ -515,12 +521,4 @@ body.dark-mode .notif-icon.system  { background: #1e293b; color: #94a3b8; }
   white-space: nowrap;
   max-width: 100%;
   display: block;
-}
-/* ── Fix: sidebar footer sticks to bottom ── */
-#sidebar {
-  justify-content: space-between;
-}
-
-#sidebar .nav-scroll ul {
-  flex: 0;
 }
