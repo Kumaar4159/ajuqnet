@@ -490,3 +490,8 @@ body.dark-mode .notif-icon.system  { background: #1e293b; color: #94a3b8; }
     flex-shrink: 0;
   }
 }
+/* ── Fix: announcement text overflow on mobile ── */
+.card .d-flex.gap-3 .flex-grow-1 {
+  overflow: hidden;
+  min-width: 0;
+}
