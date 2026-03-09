@@ -89,7 +89,7 @@
             style="font-size:.65rem">
         <%= ann.priority %>
       </span>
-      <div class="min-w-0 flex-grow-1">
+      <div class="min-w-0 flex-grow-1 overflow-hidden">
         <div class="fw-semibold small"><%= ann.pinned ? '📌 ' : '' %><%= ann.title %></div>
         <div class="text-muted small text-truncate">
           <%= ann.message.substring(0, 90) %><%= ann.message.length > 90 ? '…' : '' %>
