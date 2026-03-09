@@ -1,4 +1,4 @@
-<nav id="sidebar" class="d-flex flex-column p-0" style="height:100vh;max-height:100vh;overflow:hidden;">
+<nav id="sidebar" class="d-flex flex-column p-0">
   <!-- Brand -->
   <a href="/dashboard" class="sidebar-brand d-flex align-items-center gap-2 px-3 py-2 text-decoration-none">
     <i class="bi bi-mortarboard-fill fs-4"></i>
@@ -7,7 +7,8 @@
   <hr class="sidebar-divider">
 
   <!-- Main nav -->
-  <ul class="nav nav-pills flex-column nav-scroll px-2 gap-0">
+  <div class="nav-scroll" style="flex:1;overflow-y:auto;min-height:0;">
+  <ul class="nav nav-pills flex-column px-2 gap-0">
     <li class="nav-item">
       <a href="/dashboard" class="nav-link sidebar-link <%= currentPath.startsWith('/dashboard') ? 'active' : '' %>">
         <i class="bi bi-speedometer2"></i> Dashboard
@@ -174,5 +175,6 @@
       </button>
     </form>
     <% } %>
+  </div>
   </div>
 </nav>
