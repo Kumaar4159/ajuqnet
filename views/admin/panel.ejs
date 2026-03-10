@@ -8,6 +8,43 @@
   <div class="col"><div class="card border-0 shadow-sm text-center py-2"><div class="fw-bold fs-4"><%= messageStats.reduce((s,d)=>s+d.count,0) %></div><div class="small text-muted">Messages (7d)</div></div></div>
 </div>
 
+<!-- Pending approvals -->
+<% const pendingUsers = users.filter(u => u.approvalStatus === 'pending'); %>
+<% if (pendingUsers.length) { %>
+<div class="card border-0 shadow-sm mb-3 border-start border-warning border-3">
+  <div class="card-header bg-transparent border-0 fw-semibold text-warning">
+    <i class="bi bi-person-exclamation me-1"></i>Pending Approvals (<%= pendingUsers.length %>)
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Registered</th><th>Actions</th></tr></thead>
+      <tbody>
+        <% pendingUsers.forEach(u => { %>
+        <tr>
+          <td class="fw-semibold"><%= u.name %></td>
+          <td class="small text-muted"><%= u.email %></td>
+          <td><span class="badge bg-secondary"><%= u.role %></span></td>
+          <td class="small"><%= u.department || '—' %></td>
+          <td class="small text-muted"><%= new Date(u.createdAt).toLocaleDateString() %></td>
+          <td>
+            <div class="d-flex gap-1">
+              <form action="/admin/users/<%= u._id %>/approve" method="POST">
+                <button class="btn btn-xs btn-success"><i class="bi bi-check-lg me-1"></i>Approve</button>
+              </form>
+              <form action="/admin/users/<%= u._id %>/reject" method="POST">
+                <button class="btn btn-xs btn-danger"><i class="bi bi-x-lg me-1"></i>Reject</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<!-- Filter bar -->
 <!-- Filter bar -->
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body py-2">
