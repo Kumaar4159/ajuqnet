@@ -455,6 +455,7 @@ body.dark-mode .notif-icon.system  { background: #1e293b; color: #94a3b8; }
     position: fixed;
     top: 0; left: 0;
     height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
     transform: translateX(-100%);
     z-index: 200;
     transition: transform .25s ease;
