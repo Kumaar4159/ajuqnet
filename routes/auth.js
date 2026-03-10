@@ -29,7 +29,7 @@ router.post('/login', redirectIfAuthenticated, loginRules, async (req, res) => {
     if (!user)
       return res.render('auth/login', { title: 'Login', error: 'Invalid email or password.', info: null });
 
-    if (user.approvalStatus === 'pending' && false)
+    if (user.approvalStatus === 'pending')
       return res.render('auth/login', { title: 'Login', error: 'Your account is pending admin approval.', info: null });
     if (user.approvalStatus === 'rejected')
       return res.render('auth/login', { title: 'Login', error: 'Your account registration was rejected. Contact an administrator.', info: null });
