@@ -76,5 +76,19 @@ router.post('/users/:id/delete', requireRole('admin'), async (req, res) => {
     res.redirect('/admin?success=User+deleted');
   } catch { res.redirect('/admin?error=Delete+failed'); }
 });
+// POST /admin/users/:id/approve
+router.post('/users/:id/approve', requireRole('admin'), async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.params.id, { approvalStatus: 'approved', isActive: true });
+    res.redirect('/admin?success=User+approved');
+  } catch { res.redirect('/admin?error=Approval+failed'); }
+});
 
+// POST /admin/users/:id/reject
+router.post('/users/:id/reject', requireRole('admin'), async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.params.id, { approvalStatus: 'rejected', isActive: false });
+    res.redirect('/admin?success=User+rejected');
+  } catch { res.redirect('/admin?error=Reject+failed'); }
+});
 module.exports = router;
