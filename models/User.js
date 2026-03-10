@@ -61,7 +61,7 @@ const userSchema = new mongoose.Schema(
     approvalStatus: {
       type: String,
       enum: ['pending', 'approved', 'rejected'],
-      default: 'pending',
+      default: 'approved',
     },
     // Account locking fields
     loginAttempts: {
