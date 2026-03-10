@@ -523,3 +523,17 @@ body.dark-mode .notif-icon.system  { background: #1e293b; color: #94a3b8; }
   max-width: 100%;
   display: block;
 }
+
+/* ── Fix: dashboard quick action cards mobile overflow ── */
+@media (max-width: 767px) {
+  .card-body .fw-semibold,
+  .card-body .small.text-muted {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .card-body.d-flex.align-items-center.gap-3 {
+    gap: .5rem !important;
+    padding: .6rem !important;
+  }
+}
