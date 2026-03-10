@@ -29,6 +29,10 @@ router.post('/login', redirectIfAuthenticated, loginRules, async (req, res) => {
     if (!user)
       return res.render('auth/login', { title: 'Login', error: 'Invalid email or password.', info: null });
 
+    if (user.approvalStatus === 'pending')
+      return res.render('auth/login', { title: 'Login', error: 'Your account is pending admin approval.', info: null });
+    if (user.approvalStatus === 'rejected')
+      return res.render('auth/login', { title: 'Login', error: 'Your account registration was rejected. Contact an administrator.', info: null });
     if (!user.isActive)
       return res.render('auth/login', { title: 'Login', error: 'Your account has been deactivated. Contact an administrator.', info: null });
 
@@ -86,8 +90,8 @@ router.post('/register', redirectIfAuthenticated, registerRules, async (req, res
     if (await User.findByEmail(email))
       return res.render('auth/register', { title: 'Register', error: 'An account with this email already exists.' });
 
-    await User.create({ name, email, password, role: assignedRole, department, studentId, semester: assignedRole === 'student' ? (semester || '') : '' });
-    res.redirect('/auth/login?info=Account+created+successfully.+Please+log+in.');
+    await User.create({ name, email, password, role: assignedRole, department, studentId, semester: assignedRole === 'student' ? (semester || '') : '', isActive: false, approvalStatus: 'pending' });
+    res.redirect('/auth/login?info=Account+created.+Please+wait+for+admin+approval.');
   } catch (err) {
     if (err.name === 'ValidationError') {
       const msg = Object.values(err.errors).map(e => e.message).join(' ');
