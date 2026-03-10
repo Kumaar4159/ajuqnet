@@ -1,4 +1,8 @@
 <%- include('../partials/layout_start') %>
+<!-- Welcome -->
+<div class="mb-4">
+  <h4 class="fw-bold mb-0">Welcome back, <%= user.name %> 👋</h4>
+</div>
 <div class="row g-3 mb-4">
   <div class="col-sm-4">
     <div class="card border-0 shadow-sm text-center py-3">
@@ -84,7 +88,7 @@
         var colMap = { info:'primary', warning:'warning', urgent:'danger' };
         var col    = colMap[ann.priority] || 'primary';
     %>
-    <div class="d-flex gap-3 px-3 py-2 border-bottom align-items-start">
+    <a href="/announcements" class="d-flex gap-3 px-3 py-2 border-bottom align-items-start text-decoration-none text-dark" style="cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--body-bg)'" onmouseout="this.style.background=''">
       <span class="badge bg-<%= col %>-subtle text-<%= col %> border border-<%= col %>-subtle mt-1 flex-shrink-0"
             style="font-size:.65rem">
         <%= ann.priority %>
@@ -98,7 +102,7 @@
           <%= new Date(ann.createdAt).toLocaleDateString() %> · <%= ann.createdByName %>
         </div>
       </div>
-    </div>
+    </a>
     <% }) %>
   </div>
 </div>
